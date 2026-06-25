@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Store, CheckCircle, Star, MessageSquare } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Store, CheckCircle, Star, MessageSquare, ExternalLink } from 'lucide-react'
 import Image from 'next/image'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import FeedbackForm from '@/components/FeedbackForm'
@@ -12,8 +12,44 @@ import Logo from '@/components/Logo'
 
 const DEFAULT_LANG = 'he'
 
+// Popular platform icons as simple SVGs
+const PLATFORM_ICONS = {
+  instagram: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+    </svg>
+  ),
+  facebook: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  ),
+  wolt: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <circle cx="12" cy="12" r="10"/>
+      <text x="12" y="16" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">W</text>
+    </svg>
+  ),
+  tripadvisor: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+      <path d="M12 0C5.374 0 0 5.373 0 12c0 6.628 5.374 12 12 12 6.629 0 12-5.372 12-12 0-6.627-5.371-12-12-12zm0 2c5.523 0 10 4.477 10 10S17.523 22 12 22 2 17.523 2 12 6.477 2 12 2zm0 3a7 7 0 100 14A7 7 0 0012 5z"/>
+    </svg>
+  ),
+}
+
+function getIcon(url, label) {
+  const lower = (url + label).toLowerCase()
+  if (lower.includes('instagram')) return PLATFORM_ICONS.instagram
+  if (lower.includes('facebook') || lower.includes('fb.com')) return PLATFORM_ICONS.facebook
+  if (lower.includes('wolt')) return PLATFORM_ICONS.wolt
+  if (lower.includes('tripadvisor')) return PLATFORM_ICONS.tripadvisor
+  return <ExternalLink className="w-5 h-5" />
+}
+
 export default function CustomerReviewPage({ store }) {
   const supabase = createClientComponentClient()
+  const tracked = useRef(false)
+
   const [langCode, setLangCode] = useState(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('rg-lang') || DEFAULT_LANG
     return DEFAULT_LANG
@@ -22,53 +58,59 @@ export default function CustomerReviewPage({ store }) {
 
   const t = getLang(langCode)
   const langMeta = getLangMeta(langCode)
+  const customLinks = Array.isArray(store.custom_links) ? store.custom_links.filter(l => l.url && l.label) : []
+
+  // Track page view once
+  useEffect(() => {
+    if (tracked.current) return
+    tracked.current = true
+    supabase.from('analytics_events').insert({ store_id: store.id, event_type: 'view' })
+  }, [store.id, supabase])
 
   function handleLangChange(code) {
     setLangCode(code)
     if (typeof window !== 'undefined') localStorage.setItem('rg-lang', code)
   }
 
-  function handleGoogle() {
+  async function handleGoogle() {
+    await supabase.from('analytics_events').insert({ store_id: store.id, event_type: 'click_google' })
     window.location.href = store.google_review_url
   }
 
+  async function handleCustomLink(link) {
+    await supabase.from('analytics_events').insert({ store_id: store.id, event_type: 'click_custom', link_label: link.label })
+    window.open(link.url, '_blank', 'noopener')
+  }
+
   async function handlePrivate() {
+    await supabase.from('analytics_events').insert({ store_id: store.id, event_type: 'click_private' })
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setScreen('auth'); return }
 
     const { data: existing } = await supabase
-      .from('feedback')
-      .select('id')
-      .eq('store_id', store.id)
-      .eq('customer_id', session.user.id)
+      .from('feedback').select('id')
+      .eq('store_id', store.id).eq('customer_id', session.user.id)
       .maybeSingle()
-
     setScreen(existing ? 'already_rated' : 'form')
   }
 
   async function handleAuthenticated() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
-
     const { data: existing } = await supabase
-      .from('feedback')
-      .select('id')
-      .eq('store_id', store.id)
-      .eq('customer_id', session.user.id)
+      .from('feedback').select('id')
+      .eq('store_id', store.id).eq('customer_id', session.user.id)
       .maybeSingle()
-
     setScreen(existing ? 'already_rated' : 'form')
   }
 
   return (
     <main dir={langMeta.dir} className="min-h-screen bg-[#f7f6f3] flex flex-col">
-      {/* Top bar */}
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
         <Logo size="sm" />
         <LanguageSwitcher current={langCode} onChange={handleLangChange} />
       </div>
 
-      {/* Content */}
       <div className="flex-1 flex items-center justify-center px-5 pb-8 pt-4">
         <div className="w-full max-w-sm flex flex-col items-center gap-7">
 
@@ -92,12 +134,10 @@ export default function CustomerReviewPage({ store }) {
 
               <div className="w-full flex flex-col gap-3">
                 {/* Google */}
-                <button
-                  onClick={handleGoogle}
+                <button onClick={handleGoogle}
                   className="w-full flex items-center gap-4 bg-white border-2 border-amber-200
                     rounded-2xl px-5 py-4 shadow-sm
-                    hover:border-amber-400 hover:shadow-md active:scale-[0.98] transition-all duration-150"
-                >
+                    hover:border-amber-400 hover:shadow-md active:scale-[0.98] transition-all duration-150">
                   <div className="flex-shrink-0 w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
                     <Star size={24} className="text-amber-400 fill-amber-400" />
                   </div>
@@ -108,13 +148,11 @@ export default function CustomerReviewPage({ store }) {
                   <span className="text-slate-300 text-base">←</span>
                 </button>
 
-                {/* Private */}
-                <button
-                  onClick={handlePrivate}
+                {/* Private feedback */}
+                <button onClick={handlePrivate}
                   className="w-full flex items-center gap-4 bg-white border-2 border-slate-200
                     rounded-2xl px-5 py-4 shadow-sm
-                    hover:border-slate-400 hover:shadow-md active:scale-[0.98] transition-all duration-150"
-                >
+                    hover:border-slate-400 hover:shadow-md active:scale-[0.98] transition-all duration-150">
                   <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
                     <MessageSquare size={22} className="text-slate-500" />
                   </div>
@@ -124,6 +162,22 @@ export default function CustomerReviewPage({ store }) {
                   </div>
                   <span className="text-slate-300 text-base">←</span>
                 </button>
+
+                {/* Custom links */}
+                {customLinks.map((link, i) => (
+                  <button key={i} onClick={() => handleCustomLink(link)}
+                    className="w-full flex items-center gap-4 bg-white border-2 border-slate-100
+                      rounded-2xl px-5 py-4 shadow-sm
+                      hover:border-slate-300 hover:shadow-md active:scale-[0.98] transition-all duration-150">
+                    <div className="flex-shrink-0 w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500">
+                      {getIcon(link.url, link.label)}
+                    </div>
+                    <div className="flex-1 text-right">
+                      <p className="font-bold text-slate-900 text-[15px]">{link.label}</p>
+                    </div>
+                    <span className="text-slate-300 text-base">←</span>
+                  </button>
+                ))}
               </div>
 
               <p className="text-xs text-slate-400 text-center">תודה שלקחת רגע לשתף אותנו 🙏</p>
@@ -160,9 +214,7 @@ export default function CustomerReviewPage({ store }) {
                 <span className="text-3xl">⭐</span>
               </div>
               <h2 className="text-xl font-black text-slate-900">כבר שלחת משוב!</h2>
-              <p className="text-slate-500 text-sm max-w-xs">
-                כבר שלחת משוב פרטי לחנות זו. תודה שעזרת לנו להשתפר!
-              </p>
+              <p className="text-slate-500 text-sm max-w-xs">תודה שעזרת לנו להשתפר!</p>
               <button onClick={handleGoogle}
                 className="flex items-center gap-2 text-sm text-amber-600 font-bold hover:underline mt-1">
                 <Star size={14} className="fill-amber-400 text-amber-400" />
@@ -190,7 +242,6 @@ export default function CustomerReviewPage({ store }) {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="text-center py-4 text-xs text-slate-400">
         © {new Date().getFullYear()} ReviewGate · כל הזכויות שמורות
       </footer>
