@@ -283,10 +283,6 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 flex-shrink-0">
-                        <button onClick={() => { setEditingStore(s); setShowStoreForm(true) }}
-                          className="flex items-center gap-1.5 btn-secondary text-xs px-3 py-2">
-                          <Edit2 size={12} /> ערוך
-                        </button>
                         <button onClick={() => setBlockTarget(s)}
                           className="flex items-center gap-1.5 bg-white hover:bg-red-50 text-red-500 text-xs font-bold px-3 py-2 rounded-xl border border-red-200 transition">
                           <Ban size={12} /> השעה

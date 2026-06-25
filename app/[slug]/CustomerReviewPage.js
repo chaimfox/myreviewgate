@@ -106,27 +106,40 @@ export default function CustomerReviewPage({ store }) {
 
   return (
     <main dir={langMeta.dir} className="min-h-screen bg-[#f7f6f3] flex flex-col">
-      <div className="flex items-center justify-between px-5 pt-5 pb-2">
-        <Logo size="sm" />
-        <LanguageSwitcher current={langCode} onChange={handleLangChange} />
+
+      {/* ── Banner ── */}
+      <div className="relative w-full h-52 overflow-hidden flex-shrink-0">
+        {store.logo_url ? (
+          <>
+            <Image src={store.logo_url} alt={store.name} fill className="object-cover" priority />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
+          </>
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+            <Store size={56} className="text-white/30" />
+          </div>
+        )}
+        {/* Logo + language switcher overlay */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 pt-4">
+          <Logo size="sm" theme="dark" />
+          <LanguageSwitcher current={langCode} onChange={handleLangChange} />
+        </div>
+        {/* Store name at bottom of banner */}
+        <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
+          <h1 className="text-2xl font-black text-white" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.4)' }}>
+            {store.name}
+          </h1>
+        </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-5 pb-8 pt-4">
+      <div className="flex-1 flex items-center justify-center px-5 pb-8 pt-6">
         <div className="w-full max-w-sm flex flex-col items-center gap-7">
-
-          {/* Store logo */}
-          <div className="relative w-24 h-24 rounded-3xl overflow-hidden bg-white shadow-lg border border-slate-100 flex items-center justify-center">
-            {store.logo_url
-              ? <Image src={store.logo_url} alt={store.name} fill className="object-cover" />
-              : <Store size={38} className="text-slate-300" />}
-          </div>
 
           {/* ── CHOICE ── */}
           {screen === 'choice' && (
             <div className="w-full flex flex-col items-center gap-5 animate-fadeIn">
               <div className="text-center">
-                <h1 className="text-2xl font-black text-slate-900">{store.name}</h1>
-                <p className="text-slate-500 mt-1.5 text-sm leading-relaxed">
+                <p className="text-slate-500 text-sm leading-relaxed">
                   חשוב לנו לשמוע את דעתך!<br />
                   <span className="text-xs text-slate-400">כיצד תרצה לשתף אותנו?</span>
                 </p>
