@@ -10,7 +10,7 @@ async function getStore(slug) {
   )
   const { data, error } = await supabase
     .from('stores')
-    .select('id, name, logo_url, google_review_url')
+    .select('id, name, logo_url, google_review_url, custom_links')
     .eq('slug', slug)
     .single()
 
