@@ -88,10 +88,10 @@ export default function StoreForm({ initial, onSave, onCancel }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" dir="rtl">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-          <h2 className="font-semibold text-gray-900">{initial ? 'עריכת חנות' : 'הוספת חנות חדשה'}</h2>
-          <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-            <X size={18} className="text-gray-500" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+          <h2 className="font-black text-slate-900">{initial ? 'עריכת חנות' : 'הוספת חנות חדשה'}</h2>
+          <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-slate-100 transition">
+            <X size={18} className="text-slate-500" />
           </button>
         </div>
 
@@ -116,8 +116,8 @@ export default function StoreForm({ initial, onSave, onCancel }) {
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
                   className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl
-                    border border-indigo-200 text-indigo-600 text-sm font-semibold
-                    hover:bg-indigo-50 disabled:opacity-50 transition"
+                    border border-amber-200 text-amber-700 text-sm font-bold
+                    hover:bg-amber-50 disabled:opacity-50 transition"
                 >
                   {uploading ? (
                     <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -178,9 +178,9 @@ export default function StoreForm({ initial, onSave, onCancel }) {
                 placeholder={placeholder}
                 required={required}
                 dir={LTR_FIELDS.includes(key) ? 'ltr' : 'rtl'}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-                  placeholder-gray-400 transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm
+                  focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent focus:bg-white
+                  placeholder-slate-400 transition"
               />
             </div>
           ))}
@@ -188,13 +188,10 @@ export default function StoreForm({ initial, onSave, onCancel }) {
           {error && <p className="text-sm text-red-500">{error}</p>}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onCancel}
-              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition">
+            <button type="button" onClick={onCancel} className="flex-1 btn-secondary">
               ביטול
             </button>
-            <button type="submit" disabled={loading || uploading}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl
-                bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
+            <button type="submit" disabled={loading || uploading} className="flex-1 btn-primary">
               {loading ? 'שומר...' : (<><Save size={15} />שמור</>)}
             </button>
           </div>
