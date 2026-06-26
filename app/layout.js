@@ -3,6 +3,29 @@ import './globals.css'
 export const metadata = {
   title: 'myReviewGate – ניהול חוות דעת חכם',
   description: 'הפוך כל לקוח למדרג מרוצה. myReviewGate מפנה ביקורות חיוביות לגוגל ושומר תלונות פרטיות.',
+  metadataBase: new URL('https://myreviewgate.com'),
+  openGraph: {
+    title: 'myReviewGate – הפוך כל לקוח למדרג מרוצה',
+    description: 'שים NFC או QR על הדלפק. לקוחות מרוצים → גוגל. לקוחות לא מרוצים → משוב פרטי אליך.',
+    url: 'https://myreviewgate.com',
+    siteName: 'myReviewGate',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'myReviewGate – ניהול חוות דעת חכם',
+      },
+    ],
+    locale: 'he_IL',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'myReviewGate – הפוך כל לקוח למדרג מרוצה',
+    description: 'שים NFC או QR על הדלפק. לקוחות מרוצים → גוגל. לקוחות לא מרוצים → משוב פרטי.',
+    images: ['/og-image.png'],
+  },
 }
 
 export default function RootLayout({ children }) {

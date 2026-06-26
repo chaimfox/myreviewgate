@@ -20,8 +20,31 @@ async function getStore(slug) {
 
 export async function generateMetadata({ params }) {
   const store = await getStore(params.slug)
+  if (!store) return { title: 'myReviewGate' }
+
+  const title = `${store.name} – דרג את החוויה שלך`
+  const description = `איך היה הביקור שלך ב${store.name}? שתף אותנו בחוויה שלך.`
+
   return {
-    title: store ? `Rate your experience at ${store.name}` : 'Store Not Found',
+    title,
+    description,
+    metadataBase: new URL('https://myreviewgate.com'),
+    openGraph: {
+      title,
+      description,
+      url: `https://myreviewgate.com/${params.slug}`,
+      siteName: 'myReviewGate',
+      images: store.logo_url
+        ? [{ url: store.logo_url, width: 800, height: 800, alt: store.name }]
+        : [{ url: '/og-image.png', width: 1200, height: 630, alt: store.name }],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: store.logo_url ? [store.logo_url] : ['/og-image.png'],
+    },
   }
 }
 
