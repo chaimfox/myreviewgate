@@ -31,7 +31,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex" dir="rtl">
+    <main id="main-content" className="min-h-screen flex" dir="rtl">
       {/* Left decorative panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col justify-between p-12">
         <Logo size="md" theme="dark" />
@@ -103,9 +103,10 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPw((p) => !p)}
+                    aria-label={showPw ? 'הסתר סיסמה' : 'הצג סיסמה'}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition"
                   >
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPw ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
                   </button>
                 </div>
               </div>
@@ -144,7 +145,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <footer className="absolute bottom-0 left-0 right-0 text-center py-4 text-xs text-slate-400">
-          © {new Date().getFullYear()} ReviewGate · כל הזכויות שמורות
+          © {new Date().getFullYear()} myReviewGate · כל הזכויות שמורות
         </footer>
       </div>
     </main>

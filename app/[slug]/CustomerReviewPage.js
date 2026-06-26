@@ -118,7 +118,7 @@ export default function CustomerReviewPage({ store }) {
   }
 
   return (
-    <main dir={langMeta.dir} className="min-h-screen bg-[#f7f6f3] flex flex-col">
+    <main id="main-content" dir={langMeta.dir} lang={langCode} className="min-h-screen bg-[#f7f6f3] flex flex-col">
 
       {/* ── Banner ── */}
       <div className="relative w-full h-52 overflow-hidden flex-shrink-0">
@@ -152,45 +152,46 @@ export default function CustomerReviewPage({ store }) {
           {screen === 'choice' && (
             <div className="w-full flex flex-col items-center gap-5 animate-fadeIn">
               <div className="text-center flex flex-col items-center gap-3">
-                <h2 className="text-xl font-black text-slate-900">איך היה הביקור שלך?</h2>
-                {/* Decorative stars */}
-                <div className="flex gap-1">
+                <h2 className="text-xl font-black text-slate-900">{t.rateUs}</h2>
+                <div className="flex gap-1" aria-hidden="true">
                   {[1,2,3,4,5].map(i => (
                     <Star key={i} size={22} className="text-amber-400 fill-amber-400" />
                   ))}
                 </div>
-                <p className="text-slate-500 text-sm">בחר את הדרך המועדפת עליך לשתף אותנו</p>
+                <p className="text-slate-500 text-sm">{t.chooseWay}</p>
               </div>
 
-              <div className="w-full flex flex-col gap-3">
+              <div className="w-full flex flex-col gap-3" role="list">
                 {/* Google */}
-                <button onClick={handleGoogle}
+                <button onClick={handleGoogle} role="listitem"
+                  aria-label={t.rateGoogle}
                   className="w-full flex items-center gap-4 bg-white border-2 border-amber-200
                     rounded-2xl px-5 py-4 shadow-sm
                     hover:border-amber-400 hover:shadow-md active:scale-[0.98] transition-all duration-150">
-                  <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl border border-slate-100 flex items-center justify-center shadow-sm">
+                  <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl border border-slate-100 flex items-center justify-center shadow-sm" aria-hidden="true">
                     <GoogleIcon />
                   </div>
                   <div className="flex-1 text-right">
-                    <p className="font-bold text-slate-900 text-[15px]">אשמח לדרג אתכם בגוגל</p>
-                    <p className="text-xs text-slate-400 mt-0.5">עוזר לאחרים למצוא אותנו</p>
+                    <p className="font-bold text-slate-900 text-[15px]">{t.rateGoogle}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{t.rateGoogleSub}</p>
                   </div>
-                  <span className="text-slate-300 text-base">←</span>
+                  <span className="text-slate-300 text-base" aria-hidden="true">←</span>
                 </button>
 
                 {/* Private feedback */}
-                <button onClick={handlePrivate}
+                <button onClick={handlePrivate} role="listitem"
+                  aria-label={t.privateFeedback}
                   className="w-full flex items-center gap-4 bg-white border-2 border-slate-200
                     rounded-2xl px-5 py-4 shadow-sm
                     hover:border-slate-400 hover:shadow-md active:scale-[0.98] transition-all duration-150">
-                  <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                  <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center" aria-hidden="true">
                     <MessageSquare size={22} className="text-slate-500" />
                   </div>
                   <div className="flex-1 text-right">
-                    <p className="font-bold text-slate-900 text-[15px]">אשמח לכתוב משוב פרטי</p>
-                    <p className="text-xs text-slate-400 mt-0.5">ישירות לשירות הלקוחות שלנו</p>
+                    <p className="font-bold text-slate-900 text-[15px]">{t.privateFeedback}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{t.privateFeedbackSub}</p>
                   </div>
-                  <span className="text-slate-300 text-base">←</span>
+                  <span className="text-slate-300 text-base" aria-hidden="true">←</span>
                 </button>
 
                 {/* Custom links */}
@@ -243,12 +244,12 @@ export default function CustomerReviewPage({ store }) {
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
                 <span className="text-3xl">⭐</span>
               </div>
-              <h2 className="text-xl font-black text-slate-900">כבר שלחת משוב!</h2>
-              <p className="text-slate-500 text-sm max-w-xs">תודה שעזרת לנו להשתפר!</p>
+              <h2 className="text-xl font-black text-slate-900">{t.alreadyRated}</h2>
+              <p className="text-slate-500 text-sm max-w-xs">{t.alreadyRatedMsg}</p>
               <button onClick={handleGoogle}
                 className="flex items-center gap-2 text-sm text-amber-600 font-bold hover:underline mt-1">
-                <Star size={14} className="fill-amber-400 text-amber-400" />
-                דרג אותנו גם בגוגל?
+                <Star size={14} className="fill-amber-400 text-amber-400" aria-hidden="true" />
+                {t.rateGoogleToo}
               </button>
             </div>
           )}
@@ -263,8 +264,8 @@ export default function CustomerReviewPage({ store }) {
               <p className="text-slate-500 text-sm leading-relaxed max-w-xs">{t.thankYouMsg}</p>
               <button onClick={handleGoogle}
                 className="mt-2 flex items-center gap-2 text-sm text-amber-600 font-bold hover:underline">
-                <Star size={14} className="fill-amber-400 text-amber-400" />
-                דרג אותנו גם בגוגל?
+                <Star size={14} className="fill-amber-400 text-amber-400" aria-hidden="true" />
+                {t.rateGoogleToo}
               </button>
             </div>
           )}
@@ -273,7 +274,7 @@ export default function CustomerReviewPage({ store }) {
       </div>
 
       <footer className="text-center py-4 text-xs text-slate-400">
-        © {new Date().getFullYear()} ReviewGate · כל הזכויות שמורות
+        © {new Date().getFullYear()} myReviewGate · כל הזכויות שמורות
       </footer>
     </main>
   )

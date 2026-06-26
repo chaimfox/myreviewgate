@@ -409,7 +409,7 @@ export default function AdminPage() {
       </main>
 
       <footer className="text-center py-6 text-xs text-slate-400 mt-4">
-        © {new Date().getFullYear()} ReviewGate · כל הזכויות שמורות
+        © {new Date().getFullYear()} myReviewGate · כל הזכויות שמורות
       </footer>
 
       {showStoreForm && (

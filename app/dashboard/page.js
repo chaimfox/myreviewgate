@@ -23,12 +23,12 @@ function QRLink({ slug }) {
   return (
     <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
       <span className="text-xs text-amber-800 font-mono truncate flex-1 text-left" dir="ltr">{url}</span>
-      <button onClick={copy} className="flex-shrink-0 p-1.5 rounded-lg hover:bg-amber-100 transition">
-        {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} className="text-amber-600" />}
+      <button onClick={copy} aria-label={copied ? 'הקישור הועתק' : 'העתק קישור'} className="flex-shrink-0 p-1.5 rounded-lg hover:bg-amber-100 transition">
+        {copied ? <Check size={14} className="text-emerald-600" aria-hidden="true" /> : <Copy size={14} className="text-amber-600" aria-hidden="true" />}
       </button>
-      <a href={`/${slug}`} target="_blank" rel="noreferrer"
+      <a href={`/${slug}`} target="_blank" rel="noreferrer" aria-label="פתח דף לקוחות בדפדפן"
         className="flex-shrink-0 p-1.5 rounded-lg hover:bg-amber-100 transition">
-        <ExternalLink size={14} className="text-amber-600" />
+        <ExternalLink size={14} className="text-amber-600" aria-hidden="true" />
       </a>
     </div>
   )
@@ -83,7 +83,7 @@ function PendingScreen({ store, onLogout }) {
         </div>
       </div>
       <footer className="text-center py-4 text-xs text-slate-400">
-        © {new Date().getFullYear()} ReviewGate · כל הזכויות שמורות
+        © {new Date().getFullYear()} myReviewGate · כל הזכויות שמורות
       </footer>
     </div>
   )
@@ -364,7 +364,7 @@ export default function DashboardPage() {
       </main>
 
       <footer className="text-center py-6 text-xs text-slate-400 mt-4">
-        © {new Date().getFullYear()} ReviewGate · כל הזכויות שמורות
+        © {new Date().getFullYear()} myReviewGate · כל הזכויות שמורות
       </footer>
 
       {showForm && store && (

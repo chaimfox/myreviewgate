@@ -70,7 +70,7 @@ export default function RegisterPage() {
   const stepIndex = STEPS.indexOf(step)
 
   return (
-    <main className="min-h-screen bg-[#f7f6f3] flex flex-col items-center justify-center p-5" dir="rtl">
+    <main id="main-content" className="min-h-screen bg-[#f7f6f3] flex flex-col items-center justify-center p-5" dir="rtl">
       <div className="w-full max-w-md">
         {/* Brand */}
         <div className="flex justify-center mb-8">
@@ -228,7 +228,7 @@ export default function RegisterPage() {
         </p>
 
         <footer className="text-center mt-8 text-xs text-slate-400">
-          © {new Date().getFullYear()} ReviewGate · כל הזכויות שמורות
+          © {new Date().getFullYear()} myReviewGate · כל הזכויות שמורות
         </footer>
       </div>
     </main>
