@@ -151,11 +151,15 @@ export default function CustomerReviewPage({ store }) {
           {/* ── CHOICE ── */}
           {screen === 'choice' && (
             <div className="w-full flex flex-col items-center gap-5 animate-fadeIn">
-              <div className="text-center">
-                <p className="text-slate-500 text-sm leading-relaxed">
-                  חשוב לנו לשמוע את דעתך!<br />
-                  <span className="text-xs text-slate-400">כיצד תרצה לשתף אותנו?</span>
-                </p>
+              <div className="text-center flex flex-col items-center gap-3">
+                <h2 className="text-xl font-black text-slate-900">איך היה הביקור שלך?</h2>
+                {/* Decorative stars */}
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(i => (
+                    <Star key={i} size={22} className="text-amber-400 fill-amber-400" />
+                  ))}
+                </div>
+                <p className="text-slate-500 text-sm">בחר את הדרך המועדפת עליך לשתף אותנו</p>
               </div>
 
               <div className="w-full flex flex-col gap-3">
