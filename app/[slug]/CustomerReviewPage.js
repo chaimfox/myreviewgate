@@ -9,6 +9,7 @@ import CustomerAuthForm from './CustomerAuthForm'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { getLang, getLangMeta } from '@/lib/i18n'
 import Logo from '@/components/Logo'
+import SiteFooter from '@/components/SiteFooter'
 
 const DEFAULT_LANG = 'he'
 
@@ -273,9 +274,7 @@ export default function CustomerReviewPage({ store }) {
         </div>
       </div>
 
-      <footer className="text-center py-4 text-xs text-slate-400">
-        © {new Date().getFullYear()} myReviewGate · כל הזכויות שמורות
-      </footer>
+      <SiteFooter dir={langMeta.dir} />
     </main>
   )
 }

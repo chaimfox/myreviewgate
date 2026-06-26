@@ -5,6 +5,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Store, Link, Mail, Lock, User, Clock, CheckCircle, ArrowLeft } from 'lucide-react'
 import NextLink from 'next/link'
 import Logo from '@/components/Logo'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
+import SiteFooter from '@/components/SiteFooter'
 
 const STEPS = ['account', 'business', 'done']
 const STEP_LABELS = ['פרטי חשבון', 'פרטי העסק', 'סיום']
@@ -25,6 +27,13 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [userId, setUserId] = useState(null)
+  const [langCode, setLangCode] = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('rg-lang') || 'he' : 'he'
+  )
+  function handleLangChange(code) {
+    setLangCode(code)
+    if (typeof window !== 'undefined') localStorage.setItem('rg-lang', code)
+  }
 
   function handleStoreName(val) {
     setStoreName(val)
@@ -70,11 +79,13 @@ export default function RegisterPage() {
   const stepIndex = STEPS.indexOf(step)
 
   return (
-    <main id="main-content" className="min-h-screen bg-[#f7f6f3] flex flex-col items-center justify-center p-5" dir="rtl">
+    <div className="min-h-screen bg-[#f7f6f3] flex flex-col" dir="rtl">
+    <main id="main-content" className="flex-1 flex flex-col items-center justify-center p-5">
       <div className="w-full max-w-md">
-        {/* Brand */}
-        <div className="flex justify-center mb-8">
+        {/* Brand + language switcher */}
+        <div className="flex items-center justify-between mb-8">
           <Logo size="lg" />
+          <LanguageSwitcher current={langCode} onChange={handleLangChange} />
         </div>
 
         {/* Progress stepper */}
@@ -227,10 +238,9 @@ export default function RegisterPage() {
           <NextLink href="/login" className="text-amber-600 font-bold hover:underline">כניסה</NextLink>
         </p>
 
-        <footer className="text-center mt-8 text-xs text-slate-400">
-          © {new Date().getFullYear()} myReviewGate · כל הזכויות שמורות
-        </footer>
       </div>
     </main>
+    <SiteFooter />
+    </div>
   )
 }

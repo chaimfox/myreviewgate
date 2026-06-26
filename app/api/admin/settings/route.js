@@ -10,7 +10,7 @@ const svc = () => createClient(
 
 export async function GET() {
   const { data, error } = await svc().from('site_settings').select('key, value')
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({})   // table may not exist yet — return empty gracefully
   return NextResponse.json(Object.fromEntries(data.map((r) => [r.key, r.value])))
 }
 
