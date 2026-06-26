@@ -6,7 +6,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   LogOut, Edit2, RefreshCw, Store, Users,
   Clock, CheckCircle, XCircle, Ban, Unlock,
-  Eye, MousePointerClick, Star, TrendingUp, X
+  Eye, MousePointerClick, Star, TrendingUp, X,
+  Settings, Save, Mail, Phone, MessageSquare,
 } from 'lucide-react'
 import StoreForm from '@/components/StoreForm'
 import Logo from '@/components/Logo'
@@ -86,6 +87,10 @@ export default function AdminPage() {
   const [blockTarget,   setBlockTarget]   = useState(null)
   const [loading,       setLoading]       = useState(true)
   const [activeTab,     setActiveTab]     = useState('pending')
+  const [siteSettings,  setSiteSettings]  = useState({})
+  const [settingsSaving,setSettingsSaving]= useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(false)
+  const [contactMsgs,   setContactMsgs]   = useState([])
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -109,7 +114,26 @@ export default function AdminPage() {
     setAllEvents(events ?? [])
   }, [user, supabase])
 
-  useEffect(() => { if (user) fetchAll().finally(() => setLoading(false)) }, [user, fetchAll])
+  useEffect(() => {
+    if (user) {
+      fetchAll().finally(() => setLoading(false))
+      fetch('/api/admin/settings').then(r => r.json()).then(setSiteSettings).catch(() => {})
+      supabase.from('contact_messages').select('*').order('created_at', { ascending: false })
+        .then(({ data }) => setContactMsgs(data ?? []))
+    }
+  }, [user, fetchAll, supabase])
+
+  async function saveSettings() {
+    setSettingsSaving(true)
+    await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(siteSettings),
+    })
+    setSettingsSaving(false)
+    setSettingsSaved(true)
+    setTimeout(() => setSettingsSaved(false), 3000)
+  }
 
   async function handleApprove(id)  { await supabase.from('stores').update({ status: 'approved', blocked_reason: null }).eq('id', id); fetchAll() }
   async function handleReject(id)   { await supabase.from('stores').update({ status: 'rejected' }).eq('id', id); fetchAll() }
@@ -153,6 +177,7 @@ export default function AdminPage() {
     { key: 'active',    label: `לקוחות פעילים (${active.length})` },
     { key: 'suspended', label: suspended.length > 0 ? `מושעים (${suspended.length})` : 'מושעים' },
     { key: 'stats',     label: 'סטטיסטיקות' },
+    { key: 'settings',  label: 'הגדרות אתר' },
   ]
 
   /* platform totals */
@@ -402,6 +427,109 @@ export default function AdminPage() {
                   </table>
                 </div>
               </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── SETTINGS ── */}
+        {activeTab === 'settings' && (
+          <section className="animate-fadeIn flex flex-col gap-6">
+            <h2 className="text-lg font-black text-slate-900">הגדרות אתר</h2>
+
+            {/* Contact info */}
+            <div className="card p-6">
+              <h3 className="font-black text-slate-800 mb-4 flex items-center gap-2">
+                <Mail size={16} className="text-amber-500" /> פרטי יצירת קשר
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">אימייל</label>
+                  <input type="email" dir="ltr" value={siteSettings.contact_email ?? ''}
+                    onChange={e => setSiteSettings(s => ({ ...s, contact_email: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 transition" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">טלפון</label>
+                  <input type="tel" dir="ltr" value={siteSettings.contact_phone ?? ''}
+                    onChange={e => setSiteSettings(s => ({ ...s, contact_phone: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 transition" />
+                </div>
+              </div>
+            </div>
+
+            {/* Accessibility coordinator */}
+            <div className="card p-6">
+              <h3 className="font-black text-slate-800 mb-4 flex items-center gap-2">
+                <Settings size={16} className="text-amber-500" /> אחראי נגישות (לדף הצהרת נגישות)
+              </h3>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">שם</label>
+                  <input type="text" value={siteSettings.accessibility_coordinator_name ?? ''}
+                    onChange={e => setSiteSettings(s => ({ ...s, accessibility_coordinator_name: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">אימייל</label>
+                  <input type="email" dir="ltr" value={siteSettings.accessibility_coordinator_email ?? ''}
+                    onChange={e => setSiteSettings(s => ({ ...s, accessibility_coordinator_email: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 transition" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">טלפון</label>
+                  <input type="tel" dir="ltr" value={siteSettings.accessibility_coordinator_phone ?? ''}
+                    onChange={e => setSiteSettings(s => ({ ...s, accessibility_coordinator_phone: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 transition" />
+                </div>
+              </div>
+            </div>
+
+            {/* Privacy policy */}
+            <div className="card p-6">
+              <h3 className="font-black text-slate-800 mb-3">מדיניות פרטיות (תוכן עברית)</h3>
+              <textarea rows={10} value={siteSettings.privacy_policy_he ?? ''}
+                onChange={e => setSiteSettings(s => ({ ...s, privacy_policy_he: e.target.value }))}
+                className="w-full px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition resize-y font-mono" />
+            </div>
+
+            {/* Terms */}
+            <div className="card p-6">
+              <h3 className="font-black text-slate-800 mb-3">תקנון שימוש (תוכן עברית)</h3>
+              <textarea rows={10} value={siteSettings.terms_he ?? ''}
+                onChange={e => setSiteSettings(s => ({ ...s, terms_he: e.target.value }))}
+                className="w-full px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition resize-y font-mono" />
+            </div>
+
+            <button onClick={saveSettings} disabled={settingsSaving}
+              className="self-start flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-black px-6 py-3 rounded-xl transition shadow-sm shadow-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600">
+              {settingsSaving ? 'שומר...' : settingsSaved ? <><CheckCircle size={15} /> נשמר!</> : <><Save size={15} /> שמור הגדרות</>}
+            </button>
+
+            {/* Contact messages */}
+            <div className="card overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+                <MessageSquare size={15} className="text-amber-500" />
+                <p className="text-sm font-black text-slate-800">הודעות מיצירת קשר ({contactMsgs.length})</p>
+              </div>
+              {contactMsgs.length === 0 ? (
+                <p className="text-center text-slate-400 text-sm py-8">אין הודעות עדיין</p>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {contactMsgs.map(m => (
+                    <div key={m.id} className="px-5 py-4">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                          <p className="font-bold text-slate-800 text-sm">{m.name}</p>
+                          <p className="text-slate-400 text-xs" dir="ltr">{m.email}</p>
+                          {m.subject && <p className="text-amber-600 text-xs font-medium mt-0.5">{m.subject}</p>}
+                        </div>
+                        <p className="text-xs text-slate-400">{new Date(m.created_at).toLocaleDateString('he-IL')}</p>
+                      </div>
+                      <p className="text-slate-600 text-sm mt-2 leading-relaxed">{m.message}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
         )}
