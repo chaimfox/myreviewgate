@@ -135,14 +135,29 @@ export default function AdminPage() {
     setTimeout(() => setSettingsSaved(false), 3000)
   }
 
-  async function handleApprove(id)  { await supabase.from('stores').update({ status: 'approved', blocked_reason: null }).eq('id', id); fetchAll() }
-  async function handleReject(id)   { await supabase.from('stores').update({ status: 'rejected' }).eq('id', id); fetchAll() }
-  async function handleUnblock(id)  { await supabase.from('stores').update({ status: 'approved', blocked_reason: null }).eq('id', id); fetchAll() }
+  async function updateStoreStatus(storeId, status, blockedReason) {
+    const res = await fetch('/api/admin/store-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storeId, status, blockedReason }),
+    })
+    if (!res.ok) {
+      const { error } = await res.json()
+      alert(`שגיאה: ${error}`)
+      return false
+    }
+    return true
+  }
+
+  async function handleApprove(id)  { if (await updateStoreStatus(id, 'approved'))  fetchAll() }
+  async function handleReject(id)   { if (await updateStoreStatus(id, 'rejected'))  fetchAll() }
+  async function handleUnblock(id)  { if (await updateStoreStatus(id, 'approved'))  fetchAll() }
 
   async function handleBlock(store, reason) {
-    await supabase.from('stores').update({ status: 'suspended', blocked_reason: reason || null }).eq('id', store.id)
-    setBlockTarget(null)
-    fetchAll()
+    if (await updateStoreStatus(store.id, 'suspended', reason)) {
+      setBlockTarget(null)
+      fetchAll()
+    }
   }
 
   async function handleSaveStore(form) {
