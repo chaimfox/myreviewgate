@@ -8,11 +8,14 @@ export default function LanguageSwitcher({ current, onChange }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, right: 0 })
   const btnRef = useRef(null)
+  const dropRef = useRef(null)
   const currentLang = LANGUAGES.find((l) => l.code === current) ?? LANGUAGES[0]
 
   useEffect(() => {
     function handleClick(e) {
-      if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false)
+      const inBtn = btnRef.current?.contains(e.target)
+      const inDrop = dropRef.current?.contains(e.target)
+      if (!inBtn && !inDrop) setOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -46,6 +49,7 @@ export default function LanguageSwitcher({ current, onChange }) {
 
       {open && (
         <div
+          ref={dropRef}
           style={{ position: 'fixed', top: pos.top, right: pos.right }}
           className="bg-white border border-gray-100 rounded-xl shadow-xl z-[9999] min-w-[160px] overflow-hidden"
           role="listbox"
