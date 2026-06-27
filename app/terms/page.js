@@ -2,18 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import PublicHeader from '@/components/PublicHeader'
+import { useLang } from '@/hooks/useLang'
 import SiteFooter from '@/components/SiteFooter'
 
 export default function TermsPage() {
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(true)
-  const [langCode, setLangCode] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('rg-lang') || 'he' : 'he'
-  )
-  function handleLangChange(code) {
-    setLangCode(code)
-    if (typeof window !== 'undefined') localStorage.setItem('rg-lang', code)
-  }
+  const { langCode, handleLangChange } = useLang()
 
   useEffect(() => {
     fetch('/api/admin/settings')

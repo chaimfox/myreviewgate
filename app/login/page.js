@@ -7,6 +7,7 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import Logo from '@/components/Logo'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import SiteFooter from '@/components/SiteFooter'
+import { useLang } from '@/hooks/useLang'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -17,14 +18,7 @@ export default function LoginPage() {
   const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState(null)
-  const [langCode, setLangCode] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('rg-lang') || 'he' : 'he'
-  )
-
-  function handleLangChange(code) {
-    setLangCode(code)
-    if (typeof window !== 'undefined') localStorage.setItem('rg-lang', code)
-  }
+  const { langCode, handleLangChange } = useLang()
 
   async function handleLogin(e) {
     e.preventDefault()

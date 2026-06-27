@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Mail, Phone, Send, CheckCircle } from 'lucide-react'
 import PublicHeader from '@/components/PublicHeader'
+import { useLang } from '@/hooks/useLang'
 import SiteFooter from '@/components/SiteFooter'
 
 export default function ContactPage() {
@@ -11,13 +12,7 @@ export default function ContactPage() {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState(null)
-  const [langCode, setLangCode] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('rg-lang') || 'he' : 'he'
-  )
-  function handleLangChange(code) {
-    setLangCode(code)
-    if (typeof window !== 'undefined') localStorage.setItem('rg-lang', code)
-  }
+  const { langCode, handleLangChange } = useLang()
 
   useEffect(() => {
     fetch('/api/admin/settings').then((r) => r.json()).then(setSettings).catch(() => {})

@@ -7,6 +7,7 @@ import NextLink from 'next/link'
 import Logo from '@/components/Logo'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import SiteFooter from '@/components/SiteFooter'
+import { useLang } from '@/hooks/useLang'
 
 const STEPS = ['account', 'business', 'done']
 const STEP_LABELS = ['פרטי חשבון', 'פרטי העסק', 'סיום']
@@ -27,13 +28,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [userId, setUserId] = useState(null)
-  const [langCode, setLangCode] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('rg-lang') || 'he' : 'he'
-  )
-  function handleLangChange(code) {
-    setLangCode(code)
-    if (typeof window !== 'undefined') localStorage.setItem('rg-lang', code)
-  }
+  const { langCode, handleLangChange } = useLang()
 
   function handleStoreName(val) {
     setStoreName(val)

@@ -8,10 +8,10 @@ import FeedbackForm from '@/components/FeedbackForm'
 import CustomerAuthForm from './CustomerAuthForm'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { getLang, getLangMeta } from '@/lib/i18n'
+import { useLang } from '@/hooks/useLang'
 import Logo from '@/components/Logo'
 import SiteFooter from '@/components/SiteFooter'
 
-const DEFAULT_LANG = 'he'
 
 // Google "G" official colors
 const GoogleIcon = () => (
@@ -64,10 +64,7 @@ export default function CustomerReviewPage({ store }) {
   const supabase = createClientComponentClient()
   const tracked = useRef(false)
 
-  const [langCode, setLangCode] = useState(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('rg-lang') || DEFAULT_LANG
-    return DEFAULT_LANG
-  })
+  const { langCode, handleLangChange } = useLang()
   const [screen, setScreen] = useState('choice')
 
   const t = getLang(langCode)
@@ -80,11 +77,6 @@ export default function CustomerReviewPage({ store }) {
     tracked.current = true
     supabase.from('analytics_events').insert({ store_id: store.id, event_type: 'view' })
   }, [store.id, supabase])
-
-  function handleLangChange(code) {
-    setLangCode(code)
-    if (typeof window !== 'undefined') localStorage.setItem('rg-lang', code)
-  }
 
   async function handleGoogle() {
     await supabase.from('analytics_events').insert({ store_id: store.id, event_type: 'click_google' })

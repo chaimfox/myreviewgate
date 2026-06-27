@@ -9,8 +9,7 @@ import {
 import Logo from '@/components/Logo'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { getLang, getLangMeta } from '@/lib/i18n'
-
-const DEFAULT_LANG = 'he'
+import { useLang } from '@/hooks/useLang'
 
 const FEATURE_ICONS = [
   { icon: QrCode,        color: 'bg-amber-400'   },
@@ -108,15 +107,7 @@ function HeroMockup({ dir }) {
 }
 
 export default function HomePage() {
-  const [langCode, setLangCode] = useState(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('rg-lang') || DEFAULT_LANG
-    return DEFAULT_LANG
-  })
-
-  function handleLangChange(code) {
-    setLangCode(code)
-    if (typeof window !== 'undefined') localStorage.setItem('rg-lang', code)
-  }
+  const { langCode, handleLangChange } = useLang()
 
   const t = getLang(langCode)
   const h = t.home
