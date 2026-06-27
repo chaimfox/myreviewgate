@@ -2,6 +2,9 @@ import CustomerReviewPage from './CustomerReviewPage'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 
+// Always fetch fresh — never serve stale store data from cache
+export const dynamic = 'force-dynamic'
+
 // Server-side fetch so slug resolution happens at request time
 async function getStore(slug) {
   const supabase = createClient(
