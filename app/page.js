@@ -1,302 +1,417 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import {
-  Star, QrCode, MessageSquare, TrendingUp, ArrowLeft,
-  CheckCircle, BarChart2, Shield, Zap, Users, ThumbsUp,
-} from 'lucide-react'
-import Logo from '@/components/Logo'
+import { Star, QrCode, MessageSquare, TrendingUp, CheckCircle, Shield, ChevronDown } from 'lucide-react'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
-import { getLang, getLangMeta } from '@/lib/i18n'
+import SiteFooter from '@/components/SiteFooter'
 import { useLang } from '@/hooks/useLang'
+import { getLang, getLangMeta } from '@/lib/i18n'
 
-const FEATURE_ICONS = [
-  { icon: QrCode,        color: 'bg-amber-400'   },
-  { icon: Star,          color: 'bg-emerald-500'  },
-  { icon: MessageSquare, color: 'bg-slate-600'    },
-  { icon: BarChart2,     color: 'bg-orange-500'   },
-  { icon: TrendingUp,    color: 'bg-indigo-500'   },
-  { icon: CheckCircle,   color: 'bg-rose-400'     },
-]
-
-const featureText = {
-  he: [
-    { t: 'סריקה אחת, שתי תוצאות',     d: 'לקוח מרוצה עובר ישר לגוגל. לקוח לא מרוצה שולח משוב פרטי אליך — רק אתה רואה.' },
-    { t: 'שמור על הדירוג שלך',         d: 'עצור ביקורות שליליות לפני שהן מתפרסמות. טפל בתלונות בצנעה.' },
-    { t: 'תובנות אמיתיות מלקוחות',    d: 'ראה כל משוב פרטי בדשבורד שלך עם פרטי הלקוח ודירוג הכוכבים.' },
-    { t: 'אנליטיקה מפורטת',           d: 'עקוב אחר כניסות, לחיצות לגוגל ולינקים מותאמים — הכל בזמן אמת.' },
-    { t: 'קישורים מותאמים אישית',     d: 'הוסף עד 5 קישורים לעסק שלך — אינסטגרם, וולט, פייסבוק ועוד.' },
-    { t: 'הפעלה בדקות',               d: 'הירשם, קבל קישור ייחודי, שים NFC או QR על הדלפק — זהו.' },
-  ],
-  en: [
-    { t: 'One Scan, Two Outcomes',      d: 'Happy customers go straight to Google. Unhappy ones send you private feedback — only you see it.' },
-    { t: 'Protect Your Rating',         d: 'Stop negative reviews before they go public. Resolve complaints privately.' },
-    { t: 'Real Customer Insights',      d: 'See every private message in your dashboard with customer details and star rating.' },
-    { t: 'Detailed Analytics',          d: 'Track visits, Google clicks and custom link clicks — all in real time.' },
-    { t: 'Custom Links',                d: 'Add up to 5 links — Instagram, Wolt, Facebook and more.' },
-    { t: 'Up in Minutes',               d: 'Register, get your unique link, place NFC or QR on the counter — done.' },
-  ],
-  ar: [
-    { t: 'مسح واحد، نتيجتان',          d: 'العملاء السعداء يذهبون إلى جوجل. غير الراضين يرسلون لك ملاحظات خاصة.' },
-    { t: 'احمِ تقييمك',                d: 'أوقف التقييمات السلبية قبل نشرها. تعامل مع الشكاوى بشكل خاص.' },
-    { t: 'رؤى حقيقية من العملاء',      d: 'اطّلع على كل ملاحظة خاصة في لوحتك مع تفاصيل العميل.' },
-    { t: 'تحليلات مفصّلة',             d: 'تتبّع الزيارات والنقرات — كل شيء في الوقت الفعلي.' },
-    { t: 'روابط مخصصة',               d: 'أضف حتى 5 روابط — إنستغرام، ووكل، فيسبوك والمزيد.' },
-    { t: 'جاهز في دقائق',              d: 'سجّل، احصل على رابطك، ضع NFC أو QR على المنضدة — انتهينا.' },
-  ],
-  fr: [
-    { t: 'Un scan, deux résultats',     d: 'Les clients satisfaits vont sur Google. Les autres vous envoient un avis privé.' },
-    { t: 'Protégez votre note',         d: 'Stoppez les avis négatifs avant publication. Traitez les plaintes en privé.' },
-    { t: 'Vrais insights clients',      d: 'Consultez chaque avis privé dans votre tableau de bord.' },
-    { t: 'Analytique détaillée',        d: 'Suivez les visites et les clics en temps réel.' },
-    { t: 'Liens personnalisés',         d: "Ajoutez jusqu'à 5 liens — Instagram, Wolt, Facebook et plus." },
-    { t: 'Opérationnel en minutes',     d: 'Inscrivez-vous, obtenez votre lien unique, placez le NFC ou QR.' },
-  ],
-  ru: [
-    { t: 'Один скан, два результата',   d: 'Довольные клиенты идут на Google. Недовольные отправляют вам личный отзыв.' },
-    { t: 'Защитите свой рейтинг',      d: 'Остановите негативные отзывы до публикации. Решайте жалобы приватно.' },
-    { t: 'Реальные данные о клиентах', d: 'Видите каждый приватный отзыв в личном кабинете.' },
-    { t: 'Подробная аналитика',        d: 'Отслеживайте посещения и клики в реальном времени.' },
-    { t: 'Пользовательские ссылки',    d: 'Добавьте до 5 ссылок — Instagram, Wolt, Facebook и другие.' },
-    { t: 'Готово за минуты',           d: 'Зарегистрируйтесь, получите ссылку, разместите NFC или QR.' },
-  ],
-}
-
-/* ─── Mini mockup shown in hero ───────────────────────────────── */
-function HeroMockup({ dir }) {
+/* ── Dashboard mockup ──────────────────────────────────── */
+function DashboardMockup() {
   return (
-    <div className="relative mx-auto w-full max-w-xs" aria-hidden="true">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
-        {/* Banner */}
-        <div className="h-24 bg-gradient-to-br from-amber-400 to-orange-500 flex items-end px-5 pb-3">
-          <span className="text-white font-black text-sm">קפה הבוקר ☕</span>
+    <div className="relative w-full max-w-2xl mx-auto" aria-hidden="true">
+      <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-3xl -z-10" />
+
+      <div className="bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/10">
+        {/* top bar */}
+        <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5">
+          <div className="w-3 h-3 rounded-full bg-red-500/70" />
+          <div className="w-3 h-3 rounded-full bg-amber-500/70" />
+          <div className="w-3 h-3 rounded-full bg-emerald-500/70" />
+          <span className="text-slate-500 text-xs mx-auto font-mono">myreviewgate.com/dashboard</span>
         </div>
-        {/* Content */}
-        <div className="p-5 text-center" dir="rtl">
-          <p className="text-xs font-bold text-slate-500 mb-1">איך היה הביקור שלך?</p>
-          <div className="flex justify-center gap-1 mb-4">
-            {[1,2,3,4,5].map(i => (
-              <svg key={i} viewBox="0 0 24 24" className="w-6 h-6 fill-amber-400 text-amber-400">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
+
+        <div className="flex">
+          {/* sidebar */}
+          <div className="w-36 bg-slate-950 p-3 flex flex-col gap-1 border-r border-white/5">
+            <div className="flex items-center gap-2 px-2 py-2 mb-3">
+              <div className="w-5 h-5 bg-indigo-500 rounded-md flex items-center justify-center">
+                <Star size={10} className="text-white fill-white" />
+              </div>
+              <span className="text-white text-xs font-bold">ReviewGate</span>
+            </div>
+            {['דשבורד','אנליטיקה','ביקורות','הגדרות'].map((l,i) => (
+              <div key={l} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs ${i===0 ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${i===0?'bg-white':'bg-slate-700'}`} />
+                {l}
+              </div>
             ))}
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl py-2.5 px-3 text-xs font-bold text-emerald-700 flex items-center justify-center gap-2">
-              <span>⭐</span> דירוג בגוגל
+
+          {/* main */}
+          <div className="flex-1 p-4">
+            {/* stats */}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {[
+                { l:'סריקות', v:'2,543', c:'#6366f1' },
+                { l:'דירוג', v:'4.6 ★', c:'#f59e0b' },
+                { l:'ביקורות', v:'127', c:'#10b981' },
+                { l:'גוגל', v:'92%', c:'#ef4444' },
+              ].map(s => (
+                <div key={s.l} className="bg-white/5 rounded-xl p-2.5">
+                  <div className="text-slate-400 text-[9px] mb-1">{s.l}</div>
+                  <div className="text-sm font-black" style={{color:s.c}}>{s.v}</div>
+                </div>
+              ))}
             </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs font-bold text-slate-600 flex items-center justify-center gap-2">
-              <span>💬</span> משוב פרטי
+
+            {/* charts */}
+            <div className="flex gap-2 mb-3">
+              <div className="flex-1 bg-white/5 rounded-xl p-3">
+                <div className="text-slate-400 text-[9px] mb-2">סריקות — 7 ימים</div>
+                <svg viewBox="0 0 120 40" className="w-full">
+                  <defs>
+                    <linearGradient id="mg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4"/>
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <polygon points="0,35 10,30 25,20 40,25 60,10 80,18 100,8 120,5 120,35" fill="url(#mg)"/>
+                  <polyline points="0,35 10,30 25,20 40,25 60,10 80,18 100,8 120,5" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="w-24 bg-white/5 rounded-xl p-3 flex flex-col items-center gap-1">
+                <div className="text-slate-400 text-[9px] mb-1">פילוח</div>
+                <svg viewBox="0 0 40 40" className="w-14 h-14">
+                  <circle cx="20" cy="20" r="14" fill="none" stroke="#6366f1" strokeWidth="8" strokeDasharray="52 88" strokeDashoffset="-22" transform="rotate(-90 20 20)"/>
+                  <circle cx="20" cy="20" r="14" fill="none" stroke="#f59e0b" strokeWidth="8" strokeDasharray="27 113" strokeDashoffset="-74" transform="rotate(-90 20 20)"/>
+                  <circle cx="20" cy="20" r="14" fill="none" stroke="#10b981" strokeWidth="8" strokeDasharray="9 131" strokeDashoffset="-101" transform="rotate(-90 20 20)"/>
+                </svg>
+              </div>
+            </div>
+
+            {/* mini table */}
+            <div className="bg-white/5 rounded-xl overflow-hidden">
+              <div className="text-slate-400 text-[9px] px-3 py-2 border-b border-white/5">ביקורות אחרונות</div>
+              {[
+                { n:'יוסי כ.', s:5, t:'שירות מעולה!' },
+                { n:'דנה מ.', s:4, t:'ממליצה בחום' },
+                { n:'אנונימי', s:2, t:'חכיתי הרבה...' },
+              ].map((r,i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-1.5 border-b border-white/5 last:border-0">
+                  <div className="w-5 h-5 rounded-full bg-indigo-500/30 flex items-center justify-center text-[8px] text-indigo-300 font-bold flex-shrink-0">
+                    {r.n[0]}
+                  </div>
+                  <span className="text-slate-300 text-[9px] flex-1 truncate">{r.n} · {r.t}</span>
+                  <span className="text-amber-400 text-[9px]">{'★'.repeat(r.s)}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
-      {/* Floating badge */}
-      <div className="absolute -top-3 -end-3 bg-emerald-500 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg">
-        +24 ביקורות
-      </div>
-      <div className="absolute -bottom-3 -start-3 bg-white border border-slate-100 shadow-lg rounded-2xl px-3 py-2 flex items-center gap-2">
-        <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
-          <ThumbsUp size={12} className="text-amber-600" />
+
+      {/* floating badges */}
+      <div className="absolute -right-6 top-16 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2 border border-slate-100">
+        <div className="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <CheckCircle size={14} className="text-emerald-600" />
         </div>
-        <span className="text-xs font-bold text-slate-700">משוב חדש</span>
+        <div>
+          <p className="text-[10px] font-black text-slate-800">ביקורת חדשה!</p>
+          <p className="text-[9px] text-slate-400">לפני 2 דקות</p>
+        </div>
+      </div>
+      <div className="absolute -left-6 bottom-16 bg-white rounded-2xl shadow-xl px-3 py-2.5 flex items-center gap-2 border border-slate-100">
+        <div className="text-lg">⭐</div>
+        <div>
+          <p className="text-[10px] font-black text-slate-800">דירוג גוגל עלה</p>
+          <p className="text-[9px] text-emerald-500 font-bold">4.6 → 4.8</p>
+        </div>
       </div>
     </div>
   )
 }
 
+/* ── Flow Illustration ─────────────────────────────────── */
+function FlowIllustration() {
+  return (
+    <div className="flex items-center justify-center gap-3 flex-wrap">
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-16 h-16 bg-white rounded-2xl shadow-md border border-slate-100 flex items-center justify-center text-2xl">📱</div>
+        <span className="text-xs text-slate-500 font-medium">לקוח סורק</span>
+      </div>
+      <div className="text-slate-300 text-xl">→</div>
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-20 h-20 bg-indigo-600 rounded-2xl shadow-xl flex items-center justify-center">
+          <Star size={32} className="text-white fill-white" />
+        </div>
+        <span className="text-xs text-indigo-600 font-black">ReviewGate</span>
+      </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="text-slate-300">→</div>
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            <span className="text-base">⭐</span>
+            <div>
+              <p className="text-xs font-black text-emerald-800">גוגל ביקורות</p>
+              <p className="text-[10px] text-emerald-600">4–5 כוכבים</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-slate-300">→</div>
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+            <span className="text-base">💬</span>
+            <div>
+              <p className="text-xs font-black text-amber-800">משוב פרטי</p>
+              <p className="text-[10px] text-amber-600">1–3 כוכבים</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Main Page ─────────────────────────────────────────── */
 export default function HomePage() {
   const { langCode, handleLangChange } = useLang()
-
   const t = getLang(langCode)
-  const h = t.home
-  const langMeta = getLangMeta(langCode)
-  const features = featureText[langCode] ?? featureText.he
+  const meta = getLangMeta(langCode)
+  const [scrolled, setScrolled] = useState(false)
+  const [mobileMenu, setMobileMenu] = useState(false)
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', fn)
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  const navLinks = [
+    { label: 'יתרונות', href: '#features' },
+    { label: 'איך זה עובד', href: '#how' },
+    { label: 'תמחור', href: '#pricing' },
+    { label: 'צור קשר', href: '/contact' },
+  ]
 
   return (
-    <div className="min-h-screen bg-[#f7f6f3]" dir={langMeta.dir} lang={langCode}>
-      <a href="#main-content" className="skip-link">דלג לתוכן הראשי</a>
+    <div className="min-h-screen bg-white" dir={meta.dir} lang={langCode}>
 
-      {/* ── Sticky Header ──────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-white border-b-2 border-slate-900 shadow-sm">
-        <div className="max-w-6xl mx-auto px-5 py-3.5 flex items-center justify-between gap-3">
-          <Logo size="md" />
-          <nav className="flex items-center gap-2 sm:gap-3" role="navigation" aria-label="ניווט ראשי">
-            <LanguageSwitcher current={langCode} onChange={handleLangChange} />
-            <Link href="/login"
-              className="hidden sm:block text-sm font-bold text-slate-600 hover:text-slate-900 transition px-3 py-2 rounded-xl hover:bg-slate-50">
-              {h.login}
-            </Link>
-            <Link href="/register"
-              className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-white font-black text-sm px-4 py-2.5 rounded-xl transition shadow-sm shadow-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2">
-              {h.cta}
-              <ArrowLeft size={14} aria-hidden="true" />
-            </Link>
+      {/* ── NAV ── */}
+      <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur shadow-sm border-b border-slate-100' : 'bg-transparent'}`}>
+        <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+              <Star size={16} className="text-white fill-white" />
+            </div>
+            <span className="font-black text-slate-900 text-lg">myReviewGate</span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-6">
+            {navLinks.map(l => (
+              <a key={l.label} href={l.href}
+                className="text-sm text-slate-600 hover:text-indigo-600 font-medium transition">
+                {l.label}
+              </a>
+            ))}
           </nav>
+
+          <div className="hidden md:flex items-center gap-3">
+            <LanguageSwitcher current={langCode} onChange={handleLangChange} />
+            <Link href="/login" className="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition px-4 py-2 rounded-xl hover:bg-slate-50">
+              כניסה
+            </Link>
+            <Link href="/register" className="text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition shadow-sm shadow-indigo-200">
+              התחל בחינם
+            </Link>
+          </div>
+
+          <button className="md:hidden p-2 rounded-xl hover:bg-slate-100 transition" onClick={() => setMobileMenu(m => !m)}>
+            <ChevronDown size={20} className={`text-slate-600 transition-transform ${mobileMenu ? 'rotate-180' : ''}`} />
+          </button>
         </div>
+
+        {mobileMenu && (
+          <div className="md:hidden bg-white border-t border-slate-100 px-5 py-4 flex flex-col gap-3">
+            {navLinks.map(l => (
+              <a key={l.label} href={l.href} onClick={() => setMobileMenu(false)}
+                className="text-sm text-slate-600 font-medium py-1">{l.label}</a>
+            ))}
+            <div className="flex gap-3 pt-2 border-t border-slate-100">
+              <Link href="/login" className="flex-1 text-center text-sm font-semibold text-slate-700 py-2.5 rounded-xl border border-slate-200">כניסה</Link>
+              <Link href="/register" className="flex-1 text-center text-sm font-bold bg-indigo-600 text-white py-2.5 rounded-xl">התחל בחינם</Link>
+            </div>
+          </div>
+        )}
       </header>
 
-      <main id="main-content">
+      {/* ── HERO ── */}
+      <section className="min-h-screen flex flex-col items-center justify-center text-center px-5 pt-24 pb-16 bg-gradient-to-b from-indigo-50/60 via-white to-white">
+        <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold px-4 py-2 rounded-full mb-8">
+          <Star size={12} className="fill-indigo-500 text-indigo-500" />
+          ניהול חוות דעת חכם לעסקים
+        </div>
 
-        {/* ── Hero ───────────────────────────────────────────────────── */}
-        <section className="bg-gradient-to-b from-amber-50 to-[#f7f6f3] pt-16 pb-20 px-5" aria-labelledby="hero-heading">
-          <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left / text side */}
-            <div className="order-2 lg:order-1 text-center lg:text-start">
-              {/* Stars badge */}
-              <div className="inline-flex items-center gap-2 bg-white border border-amber-200 rounded-full px-4 py-1.5 mb-6 shadow-sm">
-                <div className="flex gap-0.5" aria-label="דירוג 5 כוכבים">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} size={13} className="fill-amber-400 text-amber-400" aria-hidden="true" />
+        <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 leading-tight mb-6 max-w-3xl">
+          כל הביקורות שלך.<br />
+          <span className="text-indigo-600">דשבורד אחד חכם.</span>
+        </h1>
+
+        <p className="text-lg text-slate-500 max-w-xl leading-relaxed mb-10">
+          הניח תג NFC או QR על הדלפק. לקוח מרוצה עובר ישר לגוגל.
+          לקוח עם הערה שולח לך פידבק פרטי — רק אתה רואה.
+        </p>
+
+        <div className="flex items-center gap-4 flex-wrap justify-center mb-16">
+          <Link href="/register"
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl transition shadow-lg shadow-indigo-200 text-base">
+            התחל בחינם
+            <span className="text-indigo-300">→</span>
+          </Link>
+          <a href="#how"
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold px-6 py-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition bg-white text-sm">
+            איך זה עובד?
+          </a>
+        </div>
+
+        <div className="flex items-center gap-6 text-xs text-slate-400 flex-wrap justify-center mb-16">
+          {['ללא כרטיס אשראי', 'מוכן תוך דקות', 'תמיכה בעברית'].map(b => (
+            <span key={b} className="flex items-center gap-1.5">
+              <CheckCircle size={13} className="text-emerald-500" /> {b}
+            </span>
+          ))}
+        </div>
+
+        <DashboardMockup />
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section className="py-20 px-5 bg-slate-50" id="how">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-indigo-600 font-bold text-sm mb-3 uppercase tracking-wide">הזרימה</p>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">לחיצה אחת — שתי תוצאות</h2>
+          <p className="text-slate-500 mb-14 max-w-lg mx-auto">הלקוח סורק ובוחר. מרוצה? עובר לגוגל. יש לו מה לומר? שולח לך ישירות.</p>
+          <FlowIllustration />
+        </div>
+      </section>
+
+      {/* ── 3 STEPS ── */}
+      <section className="py-24 px-5" id="features">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-indigo-600 font-bold text-sm mb-3 uppercase tracking-wide">תהליך פשוט</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900">שלושה צעדים להתחלה</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { n:'01', icon:'📋', t:'נרשמים', d:'יוצרים חשבון ומגדירים את העסק תוך דקות. מקבלים קישור ייחודי.' },
+              { n:'02', icon:'🏷️', t:'מניחים תג', d:'מדפיסים QR או מזמינים תג NFC — מניחים על הדלפק. זהו.' },
+              { n:'03', icon:'📈', t:'מקבלים תוצאות', d:'ביקורות גוגל עולות, תלונות מגיעות ישירות אליך. הכל בדשבורד.' },
+            ].map(s => (
+              <div key={s.n} className="relative bg-white border border-slate-100 rounded-3xl p-8 shadow-sm hover:shadow-md transition">
+                <div className="absolute top-6 left-6 text-slate-100 text-5xl font-black select-none">{s.n}</div>
+                <div className="text-4xl mb-4">{s.icon}</div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">{s.t}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">{s.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURES GRID ── */}
+      <section className="py-24 px-5 bg-slate-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-indigo-600 font-bold text-sm mb-3 uppercase tracking-wide">יתרונות</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900">כל מה שצריך לניהול מוניטין</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              { Icon: QrCode,        color:'bg-indigo-50 text-indigo-600',  t:'NFC + QR', d:'תג חכם על הדלפק — עובד עם כל טלפון, ללא אפליקציה.' },
+              { Icon: Star,          color:'bg-amber-50 text-amber-600',    t:'שמור על הדירוג', d:'ביקורות שליליות לא מגיעות לגוגל — מגיעות אליך בלבד.' },
+              { Icon: MessageSquare, color:'bg-emerald-50 text-emerald-600',t:'פידבק פרטי', d:'לקוח לא מרוצה שולח לך הודעה ישירה. טפל בזה בצנעה.' },
+              { Icon: TrendingUp,    color:'bg-violet-50 text-violet-600',  t:'אנליטיקה', d:'ראה כניסות, קליקים וביקורות — הכל בזמן אמת.' },
+              { Icon: Star,          color:'bg-rose-50 text-rose-600',      t:'קישורים מותאמים', d:'הוסף עד 5 קישורים — וולט, אינסטגרם, פייסבוק ועוד.' },
+              { Icon: Shield,        color:'bg-slate-50 text-slate-600',    t:'מאובטח לחלוטין', d:'הנתונים שמורים ב-Supabase עם הצפנה מלאה ו-RLS.' },
+            ].map(f => (
+              <div key={f.t} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition">
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center mb-4 ${f.color}`}>
+                  <f.Icon size={20} />
+                </div>
+                <h3 className="font-black text-slate-900 mb-1.5">{f.t}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">{f.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── STATS ── */}
+      <section className="py-20 px-5 bg-indigo-600">
+        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
+          {[
+            { n:'500+', l:'עסקים פעילים' },
+            { n:'50K+', l:'סריקות בחודש' },
+            { n:'4.9', l:'דירוג ממוצע' },
+            { n:'98%', l:'שביעות רצון' },
+          ].map(s => (
+            <div key={s.l}>
+              <p className="text-4xl font-black mb-1">{s.n}</p>
+              <p className="text-indigo-200 text-sm">{s.l}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── PRICING ── */}
+      <section className="py-24 px-5" id="pricing">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-indigo-600 font-bold text-sm mb-3 uppercase tracking-wide">תמחור</p>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">פשוט ושקוף</h2>
+          <p className="text-slate-500 mb-12">צור קשר לקבלת הצעת מחיר מותאמת לעסק שלך</p>
+          <div className="grid md:grid-cols-2 gap-6 text-right">
+            {[
+              { name:'בסיסי', price:'צור קשר', features:['קישור NFC/QR יחיד','דשבורד בסיסי','עד 100 סריקות/חודש','תמיכה במייל'], highlight: false },
+              { name:'מקצועי', price:'צור קשר', features:['קישורים מרובים','אנליטיקה מתקדמת','ללא הגבלת סריקות','קישורים מותאמים','תמיכה מועדפת'], highlight: true },
+            ].map(p => (
+              <div key={p.name} className={`rounded-3xl p-8 border ${p.highlight ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white border-slate-100 shadow-sm'}`}>
+                <h3 className={`font-black text-xl mb-1 ${p.highlight ? 'text-white' : 'text-slate-900'}`}>{p.name}</h3>
+                <p className={`text-3xl font-black mb-6 ${p.highlight ? 'text-indigo-200' : 'text-indigo-600'}`}>{p.price}</p>
+                <ul className="flex flex-col gap-2.5 mb-8">
+                  {p.features.map(f => (
+                    <li key={f} className="flex items-center gap-2 text-sm">
+                      <CheckCircle size={15} className={p.highlight ? 'text-indigo-300' : 'text-emerald-500'} />
+                      <span className={p.highlight ? 'text-indigo-100' : 'text-slate-600'}>{f}</span>
+                    </li>
                   ))}
-                </div>
-                <span className="text-xs font-bold text-slate-700">{h.badge}</span>
-              </div>
-
-              <h1 id="hero-heading" className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.1] mb-5">
-                {h.h1a}<br />
-                <span className="text-amber-500">{h.h1b}</span>
-              </h1>
-
-              <p className="text-slate-500 text-lg leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
-                {h.sub}
-              </p>
-
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-8">
-                <Link href="/register"
-                  className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-black text-base px-8 py-4 rounded-2xl transition shadow-xl shadow-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2">
-                  {h.cta}
-                  <ArrowLeft size={18} aria-hidden="true" />
-                </Link>
-                <Link href="/login"
-                  className="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-700 font-bold text-base px-8 py-4 rounded-2xl transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2">
-                  {h.login}
+                </ul>
+                <Link href="/contact"
+                  className={`block text-center py-3 rounded-2xl font-bold text-sm transition ${
+                    p.highlight ? 'bg-white text-indigo-600 hover:bg-indigo-50' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  }`}>
+                  צור קשר
                 </Link>
               </div>
-
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-sm text-slate-400">
-                {[h.p1, h.p2, h.p3].map((p) => (
-                  <span key={p} className="flex items-center gap-1.5">
-                    <CheckCircle size={14} className="text-emerald-500" aria-hidden="true" />
-                    {p}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Right / mockup side */}
-            <div className="order-1 lg:order-2 flex justify-center">
-              <HeroMockup dir={langMeta.dir} />
-            </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ── How It Works ───────────────────────────────────────────── */}
-        <section className="bg-white py-20 px-5" aria-labelledby="how-heading">
-          <div className="max-w-5xl mx-auto">
-            <h2 id="how-heading" className="text-3xl font-black text-slate-900 text-center mb-14">
-              {h.howTitle}
-            </h2>
-            <div className="grid sm:grid-cols-3 gap-8 relative">
-              {/* Connector line (desktop) */}
-              <div className="hidden sm:block absolute top-10 start-1/3 end-1/3 h-0.5 bg-amber-200 -translate-y-1/2" aria-hidden="true" />
-              {[
-                { n: '01', t: h.how1t, d: h.how1d, icon: QrCode },
-                { n: '02', t: h.how2t, d: h.how2d, icon: Users },
-                { n: '03', t: h.how3t, d: h.how3d, icon: ThumbsUp },
-              ].map(({ n, t: title, d: desc, icon: Icon }) => (
-                <div key={n} className="flex flex-col items-center text-center">
-                  <div className="relative mb-5">
-                    <div className="w-20 h-20 rounded-2xl bg-amber-50 border-2 border-amber-200 flex items-center justify-center">
-                      <Icon size={32} className="text-amber-500" aria-hidden="true" />
-                    </div>
-                    <span className="absolute -top-3 -end-3 bg-slate-900 text-white text-xs font-black w-7 h-7 rounded-full flex items-center justify-center" aria-hidden="true">
-                      {n}
-                    </span>
-                  </div>
-                  <h3 className="font-black text-slate-900 text-lg mb-2">{title}</h3>
-                  <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
-                </div>
-              ))}
-            </div>
+      {/* ── CTA ── */}
+      <section className="py-24 px-5 bg-slate-900 text-center">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex justify-center gap-1 mb-6">
+            {[1,2,3,4,5].map(i => <Star key={i} size={24} className="fill-amber-400 text-amber-400" />)}
           </div>
-        </section>
-
-        {/* ── Features ───────────────────────────────────────────────── */}
-        <section className="bg-slate-50 py-20 px-5" aria-labelledby="features-heading">
-          <div className="max-w-5xl mx-auto">
-            <h2 id="features-heading" className="text-3xl font-black text-slate-900 text-center mb-12">
-              {h.featuresTitle}
-            </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {features.map(({ t: title, d: desc }, i) => {
-                const { icon: Icon, color } = FEATURE_ICONS[i]
-                return (
-                  <div key={title}
-                    className="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-md hover:-translate-y-0.5 transition-all">
-                    <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center mb-4`} aria-hidden="true">
-                      <Icon size={20} className="text-white" />
-                    </div>
-                    <h3 className="font-black text-slate-900 mb-2">{title}</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Stats ──────────────────────────────────────────────────── */}
-        <section className="bg-amber-500 py-16 px-5" aria-labelledby="stats-heading">
-          <div className="max-w-4xl mx-auto">
-            <h2 id="stats-heading" className="text-2xl font-black text-white text-center mb-10 opacity-90">
-              {h.statsTitle}
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-              {[
-                { n: h.s1n, l: h.s1l },
-                { n: h.s2n, l: h.s2l },
-                { n: h.s3n, l: h.s3l },
-                { n: h.s4n, l: h.s4l },
-              ].map(({ n, l }) => (
-                <div key={l} className="text-center">
-                  <p className="text-4xl font-black text-white mb-1">{n}</p>
-                  <p className="text-amber-100 text-sm font-medium">{l}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── CTA Band ───────────────────────────────────────────────── */}
-        <section className="bg-slate-900 py-20 px-5" aria-labelledby="cta-heading">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 id="cta-heading" className="text-4xl font-black text-white mb-4">{h.ctaBand}</h2>
-            <p className="text-slate-400 mb-8 text-lg">{h.ctaSub}</p>
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-4">מוכן להתחיל?</h2>
+          <p className="text-slate-400 mb-10">הצטרף לעסקים שכבר מנהלים את המוניטין שלהם בחכמה.</p>
+          <div className="flex gap-4 justify-center flex-wrap">
             <Link href="/register"
-              className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-black text-lg px-10 py-5 rounded-2xl transition shadow-xl shadow-amber-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
-              {h.ctaBtn}
-              <ArrowLeft size={20} aria-hidden="true" />
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-10 py-4 rounded-2xl transition shadow-lg shadow-indigo-900/50">
+              הרשם בחינם
+            </Link>
+            <Link href="/login"
+              className="bg-white/10 hover:bg-white/20 text-white font-bold px-10 py-4 rounded-2xl transition border border-white/10">
+              כניסה
             </Link>
           </div>
-        </section>
-
-      </main>
-
-      {/* ── Footer ─────────────────────────────────────────────────── */}
-      <footer className="bg-slate-900 border-t border-white/5 py-10 px-5">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <Logo size="sm" theme="dark" />
-          <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400" aria-label="קישורי תחתית">
-            <Link href="/privacy" className="hover:text-slate-200 transition">{h.footerPrivacy}</Link>
-            <Link href="/terms"   className="hover:text-slate-200 transition">{h.footerTerms}</Link>
-            <Link href="/accessibility" className="hover:text-slate-200 transition">הצהרת נגישות</Link>
-            <Link href="/contact" className="hover:text-slate-200 transition">{h.footerContact}</Link>
-          </nav>
-          <p className="text-xs text-slate-500">© {new Date().getFullYear()} myReviewGate</p>
         </div>
-      </footer>
+      </section>
+
+      <SiteFooter dir={meta.dir} />
     </div>
   )
 }
