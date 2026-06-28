@@ -11,49 +11,67 @@ const svc = () => createClient(
 )
 
 export async function GET() {
-  const supabase = createRouteHandlerClient({ cookies })
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const supabase = createRouteHandlerClient({ cookies })
+    const { data: { user }, error: userErr } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ step: 'auth', error: userErr?.message ?? 'not logged in' })
 
-  const { data: store } = await supabase.from('stores').select('id').eq('user_id', user.id).single()
-  const { data: tokenRow } = await svc().from('google_oauth_tokens').select('*').eq('store_id', store.id).single()
+    const { data: store, error: storeErr } = await supabase.from('stores').select('id').eq('user_id', user.id).single()
+    if (!store) return NextResponse.json({ step: 'store', error: storeErr?.message ?? 'no store', user_id: user.id })
 
-  if (!tokenRow) return NextResponse.json({ error: 'no token row' })
+    const { data: tokenRow, error: tokenErr } = await svc()
+      .from('google_oauth_tokens').select('*').eq('store_id', store.id).single()
+    if (!tokenRow) return NextResponse.json({ step: 'token', error: tokenErr?.message ?? 'no token row', store_id: store.id })
 
-  // Test accounts API (v4 legacy)
-  const accountsRes = await fetch(
-    'https://mybusiness.googleapis.com/v4/accounts',
-    { headers: { Authorization: `Bearer ${tokenRow.access_token}` } }
-  )
-  const accounts = await accountsRes.json()
+    const result = {
+      step: 'ok',
+      store_id: store.id,
+      token_stored: !!tokenRow.access_token,
+      stored_location_name: tokenRow.google_location_name,
+      stored_account_id: tokenRow.google_account_id,
+      expires_at: tokenRow.expires_at,
+    }
 
-  // Test locations API if we have an account
-  let locations = null
-  const accountName = accounts.accounts?.[0]?.name
-  if (accountName) {
-    const locRes = await fetch(
-      `https://mybusiness.googleapis.com/v4/${accountName}/locations?pageSize=10`,
-      { headers: { Authorization: `Bearer ${tokenRow.access_token}` } }
-    )
-    locations = await locRes.json()
+    // Test accounts API
+    try {
+      const accountsRes = await fetch(
+        'https://mybusiness.googleapis.com/v4/accounts',
+        { headers: { Authorization: `Bearer ${tokenRow.access_token}` } }
+      )
+      result.accounts = await accountsRes.json()
+    } catch (e) {
+      result.accounts_error = e.message
+    }
+
+    // Test locations if we have an account
+    const accountName = result.accounts?.accounts?.[0]?.name
+    if (accountName) {
+      try {
+        const locRes = await fetch(
+          `https://mybusiness.googleapis.com/v4/${accountName}/locations?pageSize=10`,
+          { headers: { Authorization: `Bearer ${tokenRow.access_token}` } }
+        )
+        result.locations = await locRes.json()
+      } catch (e) {
+        result.locations_error = e.message
+      }
+    }
+
+    // Test reviews if we have stored location
+    if (tokenRow.google_location_name) {
+      try {
+        const revRes = await fetch(
+          `https://mybusiness.googleapis.com/v4/${tokenRow.google_location_name}/reviews`,
+          { headers: { Authorization: `Bearer ${tokenRow.access_token}` } }
+        )
+        result.reviews = await revRes.json()
+      } catch (e) {
+        result.reviews_error = e.message
+      }
+    }
+
+    return NextResponse.json(result)
+  } catch (err) {
+    return NextResponse.json({ step: 'crash', error: err.message, stack: err.stack?.split('\n').slice(0,5) })
   }
-
-  // Test reviews API with stored location name
-  let reviews = null
-  if (tokenRow.google_location_name) {
-    const revRes = await fetch(
-      `https://mybusiness.googleapis.com/v4/${tokenRow.google_location_name}/reviews`,
-      { headers: { Authorization: `Bearer ${tokenRow.access_token}` } }
-    )
-    reviews = await revRes.json()
-  }
-
-  return NextResponse.json({
-    token_stored: !!tokenRow.access_token,
-    stored_location_name: tokenRow.google_location_name,
-    stored_account_id: tokenRow.google_account_id,
-    accounts,
-    locations,
-    reviews,
-  })
 }
