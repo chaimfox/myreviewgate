@@ -368,32 +368,44 @@ function DashboardPage() {
               </div>
 
               {/* Stats — 4 cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[
-                  { label:'Total Reviews',    value: feedback.length.toLocaleString(), g: newThisMonth > 0 ? `+${newThisMonth} החודש` : null },
-                  { label:'Average Rating',   value: avgRating, stars: avgRatingNum, g: feedback.length > 0 ? `מתוך ${feedback.length} ביקורות` : null },
-                  { label:'New Reviews',      value: newThisMonth.toString(), g: newThisMonth > 0 ? `החודש` : null },
-                  { label:'Response Rate',    value: `${responseRate}%`, g: totalScans > 0 ? `מתוך ${totalScans} סריקות` : null },
-                ].map(s => (
-                  <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                    <p className="text-[11px] text-slate-400 mb-1 font-medium">{s.label}</p>
-                    <p className="text-2xl font-black text-slate-900 leading-none">{s.value}</p>
-                    {s.stars > 0 && (
-                      <p className="text-amber-400 text-sm leading-tight mt-0.5">
-                        {'★'.repeat(Math.round(s.stars))}{'☆'.repeat(5 - Math.round(s.stars))}
-                      </p>
-                    )}
-                    {s.g && <p className="text-[11px] text-emerald-500 font-bold mt-1">▲ {s.g}</p>}
+              {(() => {
+                const totalGoogleReviews = googleTotal ?? 0
+                const totalPrivate = feedback.length
+                const combinedTotal = totalGoogleReviews + totalPrivate
+                const googleAvg = googleRating ? Number(googleRating) : 0
+                const privateAvg = avgRatingNum
+                const combinedAvg = (googleAvg && privateAvg)
+                  ? ((googleAvg * totalGoogleReviews + privateAvg * totalPrivate) / (combinedTotal || 1)).toFixed(1)
+                  : (googleAvg || privateAvg || 0).toFixed(1)
+                return (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    {[
+                      { label:'סה"כ ביקורות', value: combinedTotal.toLocaleString(), sub: `${totalGoogleReviews} Google · ${totalPrivate} פרטיות` },
+                      { label:'דירוג ממוצע', value: combinedAvg, stars: parseFloat(combinedAvg), sub: 'ממוצע כולל' },
+                      { label:'חדשות החודש', value: newThisMonth.toString(), sub: newThisMonth > 0 ? 'ביקורות פרטיות' : 'ביקורות פרטיות' },
+                      { label:'שיעור מענה', value: `${responseRate}%`, sub: totalScans > 0 ? `מתוך ${totalScans} סריקות` : 'סריקות' },
+                    ].map(s => (
+                      <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                        <p className="text-[11px] text-slate-400 mb-1 font-medium">{s.label}</p>
+                        <p className="text-2xl font-black text-slate-900 leading-none">{s.value}</p>
+                        {s.stars > 0 && s.label === 'דירוג ממוצע' && (
+                          <p className="text-amber-400 text-sm leading-tight mt-0.5">
+                            {'★'.repeat(Math.round(s.stars))}{'☆'.repeat(5 - Math.round(s.stars))}
+                          </p>
+                        )}
+                        <p className="text-[11px] text-slate-400 mt-1">{s.sub}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )
+              })()}
 
               {/* Charts row */}
               <div className="grid lg:grid-cols-5 gap-4">
                 {/* Reviews Overview */}
                 <div className="lg:col-span-3 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-black text-slate-800 text-sm">Reviews Overview</h3>
+                    <h3 className="font-black text-slate-800 text-sm">ביקורות — 30 יום</h3>
                     <span className="text-[10px] text-slate-400 border border-slate-200 rounded-lg px-2 py-1">{dateRange}</span>
                   </div>
                   <ReviewsOverviewChart data={chartData} series={chartSeries}/>
@@ -407,69 +419,89 @@ function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Reviews by Source */}
+                {/* Reviews by Platform donut */}
                 <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                  <h3 className="font-black text-slate-800 text-sm mb-3">Reviews by Source</h3>
-                  {donutData.length > 0 ? (
-                    <>
-                      <DonutChart segments={donutData}/>
-                      <div className="flex flex-col gap-1.5 mt-3">
-                        {donutData.map(s => {
-                          const total = donutData.reduce((a,b) => a+b.value, 0) || 1
-                          return (
-                            <div key={s.label} className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background:s.color}}/>
-                                <span className="text-[10px] text-slate-500">{s.label}</span>
+                  <h3 className="font-black text-slate-800 text-sm mb-3">ביקורות לפי פלטפורמה</h3>
+                  {(() => {
+                    const platformData = [
+                      { label: 'Google', value: googleTotal ?? 0, color: '#4285F4' },
+                      { label: 'פרטיות', value: feedback.length, color: '#f59e0b' },
+                    ].filter(s => s.value > 0)
+                    return platformData.length > 0 ? (
+                      <>
+                        <DonutChart segments={platformData}/>
+                        <div className="flex flex-col gap-1.5 mt-3">
+                          {platformData.map(s => {
+                            const total = platformData.reduce((a,b) => a+b.value, 0) || 1
+                            return (
+                              <div key={s.label} className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background:s.color}}/>
+                                  <span className="text-[10px] text-slate-500">{s.label}</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-600">{s.value.toLocaleString()} ({Math.round(s.value/total*100)}%)</span>
                               </div>
-                              <span className="text-[10px] font-bold text-slate-600">{Math.round(s.value/total*100)}%</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-center h-32 text-slate-300 text-sm">אין נתונים עדיין</div>
-                  )}
+                            )
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-32 text-slate-300 text-sm">אין נתונים עדיין</div>
+                    )
+                  })()}
                 </div>
               </div>
 
-              {/* Latest Reviews */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                  <h3 className="font-black text-slate-800 text-sm">Latest Reviews</h3>
-                  <button onClick={() => setActiveTab('feedback')}
-                    className="text-[11px] text-amber-500 font-bold hover:underline flex items-center gap-1">
-                    View All <ChevronRight size={12}/>
-                  </button>
-                </div>
-                {feedback.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 text-sm">אין ביקורות עדיין</div>
-                ) : (
-                  <div className="divide-y divide-slate-50">
-                    {feedback.slice(0,5).map(f => (
-                      <div key={f.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition">
-                        {/* Avatar */}
-                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 text-amber-600 font-black text-sm">
-                          {(f.customer_name || 'א').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-800">{f.customer_name || 'אנונימי'}</p>
-                          <p className="text-xs text-slate-400 truncate">{f.comment}</p>
-                        </div>
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          {Array.from({length:5}).map((_,i) => (
-                            <span key={i} className={`text-xs ${i < f.rating ? 'text-amber-400' : 'text-slate-200'}`}>★</span>
-                          ))}
-                        </div>
-                        <span className="text-[10px] text-slate-300 flex-shrink-0 whitespace-nowrap">
-                          {new Date(f.created_at).toLocaleDateString('he-IL')}
-                        </span>
+              {/* Latest Reviews — unified */}
+              {(() => {
+                const allLatest = [
+                  ...googleReviews.map(r => ({ ...r, source: 'google' })),
+                  ...feedback.map(f => ({ ...f, source: 'private' })),
+                ].sort((a,b) => new Date(b.published_at||b.created_at) - new Date(a.published_at||a.created_at)).slice(0,8)
+                return (
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                      <h3 className="font-black text-slate-800 text-sm">ביקורות אחרונות</h3>
+                      <button onClick={() => setActiveTab('all_reviews')}
+                        className="text-[11px] text-amber-500 font-bold hover:underline flex items-center gap-1">
+                        כל הביקורות <ChevronRight size={12}/>
+                      </button>
+                    </div>
+                    {allLatest.length === 0 ? (
+                      <div className="py-12 text-center text-slate-400 text-sm">אין ביקורות עדיין</div>
+                    ) : (
+                      <div className="divide-y divide-slate-50">
+                        {allLatest.map(r => (
+                          <div key={r.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm overflow-hidden ${r.source==='google' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                              {r.author_photo
+                                ? <img src={r.author_photo} alt="" className="w-full h-full object-cover"/>
+                                : (r.author_name||r.customer_name||'א').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-sm font-semibold text-slate-800">{r.author_name||r.customer_name||'אנונימי'}</p>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.source==='google' ? 'bg-blue-50 text-blue-500' : 'bg-amber-50 text-amber-500'}`}>
+                                  {r.source==='google' ? 'Google' : 'פרטי'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400 truncate">{r.comment||r.feedback||''}</p>
+                            </div>
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                              {Array.from({length:5}).map((_,i) => (
+                                <span key={i} className={`text-xs ${i < r.rating ? 'text-amber-400' : 'text-slate-200'}`}>★</span>
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-slate-300 flex-shrink-0 whitespace-nowrap">
+                              {new Date(r.published_at||r.created_at).toLocaleDateString('he-IL')}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
+                )
+              })()}
             </div>
           )}
 
