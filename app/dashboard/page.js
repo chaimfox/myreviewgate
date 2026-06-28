@@ -5,68 +5,54 @@ import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   LogOut, Edit2, Copy, Check, ExternalLink, RefreshCw, Store,
-  Clock, Star, Eye, MousePointerClick, MessageSquare, BarChart2,
-  TrendingUp, Settings, Home, ChevronRight,
+  Clock, Star, MessageSquare, BarChart2, TrendingUp,
+  Settings, Home, MousePointerClick, ChevronRight,
 } from 'lucide-react'
 import StoreForm from '@/components/StoreForm'
 import Logo from '@/components/Logo'
 import Image from 'next/image'
 
 /* ── helpers ─────────────────────────────────────── */
-const ev    = (arr, type) => arr.filter(e => e.event_type === type).length
-const evDay = (arr, type) => { const d = new Date(); d.setHours(0,0,0,0); return arr.filter(e => e.event_type === type && new Date(e.created_at) >= d).length }
-const evWeek= (arr, type) => { const d = new Date(); d.setDate(d.getDate()-7); return arr.filter(e => e.event_type === type && new Date(e.created_at) >= d).length }
+const ev     = (arr, type) => arr.filter(e => e.event_type === type).length
+const evDay  = (arr, type) => { const d = new Date(); d.setHours(0,0,0,0); return arr.filter(e => e.event_type === type && new Date(e.created_at) >= d).length }
+const evWeek = (arr, type) => { const d = new Date(); d.setDate(d.getDate()-7); return arr.filter(e => e.event_type === type && new Date(e.created_at) >= d).length }
 
-function weeklyData(events, type) {
-  const days = Array.from({length:7}, (_,i) => { const d = new Date(); d.setDate(d.getDate()-6+i); return d })
+function monthlyData(events, types) {
+  const days = Array.from({length:30}, (_,i) => { const d = new Date(); d.setDate(d.getDate()-29+i); return d })
   return days.map(day => {
     const next = new Date(day); next.setDate(next.getDate()+1)
-    return { label: day.toLocaleDateString('he-IL',{weekday:'short'}), count: events.filter(e => e.event_type===type && new Date(e.created_at)>=day && new Date(e.created_at)<next).length }
+    const counts = {}
+    types.forEach(t => {
+      counts[t] = events.filter(e => e.event_type===t && new Date(e.created_at)>=day && new Date(e.created_at)<next).length
+    })
+    return { label: day.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'}), ...counts }
   })
 }
 
-/* ── Stat Card ───────────────────────────────────── */
-function StatCard({ label, value, sub, icon: Icon, accent = '#6366f1' }) {
-  return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-500 font-medium">{label}</span>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: accent + '18' }}>
-          <Icon size={17} style={{ color: accent }} />
-        </div>
-      </div>
-      <div>
-        <p className="text-3xl font-black text-slate-900">{value}</p>
-        {sub && <p className="text-xs text-emerald-500 font-semibold mt-1">{sub}</p>}
-      </div>
-    </div>
-  )
+function thisMonth(arr) {
+  const d = new Date(); d.setDate(1); d.setHours(0,0,0,0)
+  return arr.filter(f => new Date(f.created_at) >= d).length
 }
 
-/* ── Mini Line Chart (SVG) ──────────────────────── */
-function LineChart({ data, color = '#6366f1' }) {
-  const max = Math.max(...data.map(d => d.count), 1)
-  const W = 300, H = 80, pad = 10
-  const pts = data.map((d, i) => {
-    const x = pad + (i / (data.length - 1)) * (W - 2 * pad)
-    const y = pad + (1 - d.count / max) * (H - 2 * pad)
-    return `${x},${y}`
-  }).join(' ')
-  const area = `${pad},${H - pad} ` + pts + ` ${W - pad},${H - pad}`
+/* ── Multi-line Chart (SVG) ──────────────────────── */
+function ReviewsOverviewChart({ data, series }) {
+  const W = 500, H = 100, padX = 8, padY = 8
+  const maxVal = Math.max(...data.flatMap(d => series.map(s => d[s.key] || 0)), 1)
+  const xStep = (W - padX*2) / (data.length - 1)
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={area} fill="url(#lg)" />
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      {data.map((d, i) => {
-        const x = pad + (i / (data.length - 1)) * (W - 2 * pad)
-        const y = pad + (1 - d.count / max) * (H - 2 * pad)
-        return <circle key={i} cx={x} cy={y} r="3.5" fill={color} stroke="white" strokeWidth="2" />
+      {series.map(s => {
+        const pts = data.map((d, i) => {
+          const x = padX + i * xStep
+          const y = padY + (1 - (d[s.key]||0) / maxVal) * (H - padY*2)
+          return `${x},${y}`
+        }).join(' ')
+        return (
+          <polyline key={s.key} points={pts}
+            fill="none" stroke={s.color} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"/>
+        )
       })}
     </svg>
   )
@@ -75,11 +61,11 @@ function LineChart({ data, color = '#6366f1' }) {
 /* ── Donut Chart (SVG) ──────────────────────────── */
 function DonutChart({ segments }) {
   const total = segments.reduce((s, g) => s + g.value, 0) || 1
-  const R = 40, cx = 50, cy = 50, stroke = 14
-  let offset = 0
+  const R = 40, cx = 50, cy = 50, stroke = 16
   const circ = 2 * Math.PI * R
+  let offset = 0
   return (
-    <svg viewBox="0 0 100 100" className="w-32 h-32">
+    <svg viewBox="0 0 100 100" className="w-28 h-28 mx-auto">
       {total === 0
         ? <circle cx={cx} cy={cy} r={R} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
         : segments.map((seg, i) => {
@@ -89,19 +75,15 @@ function DonutChart({ segments }) {
               <circle key={i} cx={cx} cy={cy} r={R} fill="none"
                 stroke={seg.color} strokeWidth={stroke}
                 strokeDasharray={`${dash} ${circ - dash}`}
-                strokeDashoffset={-offset * circ / 1}
+                strokeDashoffset={-(offset * circ)}
                 transform="rotate(-90 50 50)"
                 strokeLinecap="butt"
-                style={{ strokeDashoffset: -(offset * circ) }}
               />
             )
             offset += pct
             return el
           })
       }
-      <text x="50" y="54" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#0f172a">
-        {total}
-      </text>
     </svg>
   )
 }
@@ -127,31 +109,32 @@ function PendingScreen({ store, onLogout }) {
 /* ── Sidebar ─────────────────────────────────────── */
 function Sidebar({ active, setActive, onLogout }) {
   const nav = [
-    { id: 'overview',  label: 'דשבורד',    icon: Home },
-    { id: 'analytics', label: 'אנליטיקה',  icon: BarChart2 },
-    { id: 'feedback',  label: 'ביקורות',   icon: MessageSquare },
-    { id: 'settings',  label: 'הגדרות',    icon: Settings },
+    { id: 'overview',  label: 'דשבורד',   icon: Home },
+    { id: 'feedback',  label: 'ביקורות',  icon: MessageSquare },
+    { id: 'analytics', label: 'אנליטיקה', icon: BarChart2 },
+    { id: 'trends',    label: 'מגמות',    icon: TrendingUp },
+    { id: 'settings',  label: 'הגדרות',   icon: Settings },
   ]
   return (
-    <aside className="w-56 shrink-0 bg-slate-900 min-h-screen flex flex-col py-6 px-3 gap-1">
-      <div className="px-3 mb-8">
+    <aside className="w-52 shrink-0 bg-slate-900 min-h-screen flex flex-col py-6 px-3 gap-1" dir="rtl">
+      <div className="px-2 mb-6">
         <Logo size="sm" theme="dark" />
       </div>
       {nav.map(({ id, label, icon: Icon }) => (
         <button key={id} onClick={() => setActive(id)}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all w-full text-right ${
             active === id
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-white/8'
+              ? 'bg-amber-500 text-white shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/10'
           }`}>
-          <Icon size={16} />
+          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${active === id ? 'bg-white' : 'bg-slate-600'}`} />
           {label}
         </button>
       ))}
       <div className="mt-auto">
         <button onClick={onLogout}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-white/8 transition-all w-full text-right">
-          <LogOut size={16} /> התנתק
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-white/10 transition-all w-full text-right">
+          <LogOut size={15} /> התנתק
         </button>
       </div>
     </aside>
@@ -211,7 +194,7 @@ export default function DashboardPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <RefreshCw size={22} className="animate-spin text-indigo-500" />
+      <RefreshCw size={22} className="animate-spin text-amber-500" />
     </div>
   )
   if (!store || store.status === 'pending' || store.status === 'rejected') return <PendingScreen store={store} onLogout={handleLogout} />
@@ -224,207 +207,208 @@ export default function DashboardPage() {
     </div>
   )
 
-  const avgRating = feedback.length ? (feedback.reduce((s,f) => s + (f.rating||0), 0) / feedback.length).toFixed(1) : '—'
-  const totalScans = ev(events, 'view')
-  const googleClicks = ev(events, 'click_google')
-  const privateClicks = ev(events, 'click_private')
-  const scansWeek = weeklyData(events, 'view')
-  const donutData = [
-    { label: 'גוגל',    value: googleClicks,  color: '#6366f1' },
-    { label: 'פרטי',    value: privateClicks, color: '#f59e0b' },
-    { label: 'קישורים', value: ev(events,'click_custom'), color: '#10b981' },
+  /* ── computed data ── */
+  const avgRating      = feedback.length ? (feedback.reduce((s,f) => s + (f.rating||0), 0) / feedback.length).toFixed(1) : '—'
+  const avgRatingNum   = feedback.length ? feedback.reduce((s,f) => s + (f.rating||0), 0) / feedback.length : 0
+  const totalScans     = ev(events, 'view')
+  const googleClicks   = ev(events, 'click_google')
+  const privateClicks  = ev(events, 'click_private')
+  const customClicks   = ev(events, 'click_custom')
+  const newThisMonth   = thisMonth(feedback)
+  const responseRate   = totalScans > 0 ? Math.round(((googleClicks + privateClicks + customClicks) / totalScans) * 100) : 0
+
+  const chartData = monthlyData(events, ['view','click_google','click_private'])
+  const chartSeries = [
+    { key:'view',          color:'#f59e0b', label:'סריקות' },
+    { key:'click_google',  color:'#6366f1', label:'Google' },
+    { key:'click_private', color:'#10b981', label:'פרטי' },
   ]
-  const today = new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
+  const donutData = [
+    { label:'Google',   value: googleClicks,  color:'#f59e0b' },
+    { label:'פרטי',     value: privateClicks, color:'#6366f1' },
+    { label:'קישורים',  value: customClicks,  color:'#10b981' },
+    { label:'WhatsApp', value: ev(events,'click_whatsapp'), color:'#25D366' },
+  ].filter(s => s.value > 0)
+
+  const today = new Date().toLocaleDateString('he-IL', { year:'numeric', month:'long', day:'numeric' })
+  const dateRange = (() => {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    return `${start.toLocaleDateString('he-IL',{day:'numeric',month:'short'})} – ${now.toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}`
+  })()
 
   return (
-    <div className="flex min-h-screen bg-slate-50" dir="rtl">
-      {/* Sidebar */}
-      <div className="hidden md:flex">
-        <Sidebar active={activeTab} setActive={setActiveTab} onLogout={handleLogout} />
-      </div>
+    <div className="flex min-h-screen bg-slate-50" dir="ltr">
 
-      {/* Main */}
+      {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top bar */}
-        <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+        <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between" dir="rtl">
           <div>
             <h1 className="text-lg font-black text-slate-900">
-              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'analytics' ? 'אנליטיקה' : activeTab === 'feedback' ? 'ביקורות' : 'הגדרות'}
+              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'analytics' ? 'אנליטיקה' : activeTab === 'feedback' ? 'ביקורות' : activeTab === 'trends' ? 'מגמות' : 'הגדרות'}
             </h1>
             <p className="text-xs text-slate-400">{today}</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-              <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {store.logo_url
                   ? <Image src={store.logo_url} alt="" width={24} height={24} className="object-cover w-full h-full" />
-                  : <Store size={12} className="text-indigo-500" />}
+                  : <Store size={12} className="text-amber-500" />}
               </div>
               <span className="text-sm font-semibold text-slate-700">{store.name}</span>
             </div>
-            <button onClick={() => setShowForm(true)}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition shadow-sm">
+            <button onClick={() => setActiveTab('settings')}
+              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold px-4 py-2 rounded-xl transition shadow-sm">
               <Edit2 size={13} /> ערוך עסק
             </button>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6" dir="rtl">
 
           {/* ── OVERVIEW ── */}
           {activeTab === 'overview' && (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5 max-w-5xl">
 
               {/* NFC link bar */}
-              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl px-5 py-3.5 flex items-center gap-3">
-                <span className="text-xs font-bold text-indigo-600 whitespace-nowrap">קישור NFC/QR:</span>
-                <span className="text-xs font-mono text-indigo-800 flex-1 truncate" dir="ltr">https://myreviewgate.com/{store.slug}</span>
-                <button onClick={copyLink} className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition flex-shrink-0">
-                  {copied ? <><Check size={12} /> הועתק!</> : <><Copy size={12} /> העתק</>}
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-3.5 flex items-center gap-3">
+                <span className="text-xs font-bold text-amber-600 whitespace-nowrap">קישור NFC/QR:</span>
+                <span className="text-xs font-mono text-amber-800 flex-1 truncate" dir="ltr">https://myreviewgate.com/{store.slug}</span>
+                <button onClick={copyLink} className="flex items-center gap-1.5 bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-amber-400 transition flex-shrink-0">
+                  {copied ? <><Check size={12}/> הועתק!</> : <><Copy size={12}/> העתק</>}
                 </button>
                 <a href={`/${store.slug}`} target="_blank" rel="noreferrer"
-                  className="p-1.5 text-indigo-500 hover:text-indigo-700 transition flex-shrink-0">
-                  <ExternalLink size={14} />
+                  className="p-1.5 text-amber-500 hover:text-amber-700 transition flex-shrink-0">
+                  <ExternalLink size={14}/>
                 </a>
               </div>
 
-              {/* Stat cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="סריקות NFC"     value={totalScans}      sub={`+${evDay(events,'view')} היום`}            icon={Eye}              accent="#6366f1" />
-                <StatCard label="דירוג ממוצע"     value={avgRating}       sub={feedback.length ? `מתוך ${feedback.length} ביקורות` : '—'} icon={Star}    accent="#f59e0b" />
-                <StatCard label="ביקורות פרטיות"  value={feedback.length} sub={`+${evDay(events,'click_private')} היום`}  icon={MessageSquare}    accent="#10b981" />
-                <StatCard label="קליקים לגוגל"    value={googleClicks}    sub={`+${evDay(events,'click_google')} היום`}   icon={MousePointerClick} accent="#ef4444" />
+              {/* Stats — 4 cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { label:'Total Reviews',    value: feedback.length.toLocaleString(), g: newThisMonth > 0 ? `+${newThisMonth} החודש` : null },
+                  { label:'Average Rating',   value: avgRating, stars: avgRatingNum, g: feedback.length > 0 ? `מתוך ${feedback.length} ביקורות` : null },
+                  { label:'New Reviews',      value: newThisMonth.toString(), g: newThisMonth > 0 ? `החודש` : null },
+                  { label:'Response Rate',    value: `${responseRate}%`, g: totalScans > 0 ? `מתוך ${totalScans} סריקות` : null },
+                ].map(s => (
+                  <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                    <p className="text-[11px] text-slate-400 mb-1 font-medium">{s.label}</p>
+                    <p className="text-2xl font-black text-slate-900 leading-none">{s.value}</p>
+                    {s.stars > 0 && (
+                      <p className="text-amber-400 text-sm leading-tight mt-0.5">
+                        {'★'.repeat(Math.round(s.stars))}{'☆'.repeat(5 - Math.round(s.stars))}
+                      </p>
+                    )}
+                    {s.g && <p className="text-[11px] text-emerald-500 font-bold mt-1">▲ {s.g}</p>}
+                  </div>
+                ))}
               </div>
 
               {/* Charts row */}
-              <div className="grid lg:grid-cols-3 gap-4">
-                {/* Line chart */}
-                <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-black text-slate-800">סריקות — 7 ימים אחרונים</h3>
-                    <span className="text-xs text-slate-400">{evWeek(events,'view')} סה"כ</span>
+              <div className="grid lg:grid-cols-5 gap-4">
+                {/* Reviews Overview */}
+                <div className="lg:col-span-3 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-black text-slate-800 text-sm">Reviews Overview</h3>
+                    <span className="text-[10px] text-slate-400 border border-slate-200 rounded-lg px-2 py-1">{dateRange}</span>
                   </div>
-                  <LineChart data={scansWeek} color="#6366f1" />
-                  <div className="flex justify-between mt-2">
-                    {scansWeek.map((d,i) => (
-                      <span key={i} className="text-xs text-slate-400">{d.label}</span>
+                  <ReviewsOverviewChart data={chartData} series={chartSeries}/>
+                  <div className="flex items-center gap-4 mt-3">
+                    {chartSeries.map(s => (
+                      <div key={s.key} className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{background:s.color}}/>
+                        <span className="text-[10px] text-slate-500">{s.label}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Donut chart */}
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                  <h3 className="font-black text-slate-800 mb-4">פילוח לחיצות</h3>
-                  <div className="flex flex-col items-center gap-4">
-                    <DonutChart segments={donutData} />
-                    <div className="flex flex-col gap-2 w-full">
-                      {donutData.map(s => (
-                        <div key={s.label} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
-                            <span className="text-slate-600">{s.label}</span>
-                          </div>
-                          <span className="font-bold text-slate-800">{s.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                {/* Reviews by Source */}
+                <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                  <h3 className="font-black text-slate-800 text-sm mb-3">Reviews by Source</h3>
+                  {donutData.length > 0 ? (
+                    <>
+                      <DonutChart segments={donutData}/>
+                      <div className="flex flex-col gap-1.5 mt-3">
+                        {donutData.map(s => {
+                          const total = donutData.reduce((a,b) => a+b.value, 0) || 1
+                          return (
+                            <div key={s.label} className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{background:s.color}}/>
+                                <span className="text-[10px] text-slate-500">{s.label}</span>
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-600">{Math.round(s.value/total*100)}%</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center h-32 text-slate-300 text-sm">אין נתונים עדיין</div>
+                  )}
                 </div>
               </div>
 
-              {/* Latest feedback */}
+              {/* Latest Reviews */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                  <h3 className="font-black text-slate-800">ביקורות אחרונות</h3>
+                  <h3 className="font-black text-slate-800 text-sm">Latest Reviews</h3>
                   <button onClick={() => setActiveTab('feedback')}
-                    className="flex items-center gap-1 text-xs text-indigo-600 font-bold hover:underline">
-                    הצג הכל <ChevronRight size={13} />
+                    className="text-[11px] text-amber-500 font-bold hover:underline flex items-center gap-1">
+                    View All <ChevronRight size={12}/>
                   </button>
                 </div>
                 {feedback.length === 0 ? (
                   <div className="py-12 text-center text-slate-400 text-sm">אין ביקורות עדיין</div>
                 ) : (
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {feedback.slice(0, 5).map(f => (
-                        <tr key={f.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition">
-                          <td className="px-5 py-3">
-                            <div className="font-semibold text-slate-800">{f.customer_name || 'אנונימי'}</div>
-                            <div className="text-xs text-slate-400 truncate max-w-xs">{f.comment}</div>
-                          </td>
-                          <td className="px-5 py-3 text-center">
-                            <div className="flex items-center gap-0.5 justify-center">
-                              {Array.from({length:5}).map((_,i) => (
-                                <Star key={i} size={12} className={i < f.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 fill-slate-200'} />
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-5 py-3 text-left text-xs text-slate-400 whitespace-nowrap">
-                            {new Date(f.created_at).toLocaleDateString('he-IL')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── ANALYTICS ── */}
-          {activeTab === 'analytics' && (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="סריקות היום"    value={evDay(events,'view')}            icon={Eye}              accent="#6366f1" />
-                <StatCard label="סריקות השבוע"   value={evWeek(events,'view')}           icon={TrendingUp}       accent="#6366f1" />
-                <StatCard label="גוגל היום"       value={evDay(events,'click_google')}    icon={MousePointerClick} accent="#10b981" />
-                <StatCard label="גוגל השבוע"      value={evWeek(events,'click_google')}   icon={MousePointerClick} accent="#10b981" />
-              </div>
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                <h3 className="font-black text-slate-800 mb-4">סריקות NFC — 7 ימים</h3>
-                <LineChart data={scansWeek} color="#6366f1" />
-                <div className="flex justify-between mt-2">
-                  {scansWeek.map((d,i) => <span key={i} className="text-xs text-slate-400">{d.label}</span>)}
-                </div>
-              </div>
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                <h3 className="font-black text-slate-800 mb-4">פילוח לחיצות</h3>
-                <div className="flex flex-col gap-4">
-                  {donutData.map(seg => {
-                    const total = donutData.reduce((s,g) => s+g.value,0) || 1
-                    const pct = Math.round((seg.value/total)*100)
-                    return (
-                      <div key={seg.label}>
-                        <div className="flex justify-between text-xs mb-1.5">
-                          <span className="font-semibold text-slate-700">{seg.label}</span>
-                          <span className="text-slate-400">{seg.value} · {pct}%</span>
+                  <div className="divide-y divide-slate-50">
+                    {feedback.slice(0,5).map(f => (
+                      <div key={f.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition">
+                        {/* Avatar */}
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 text-amber-600 font-black text-sm">
+                          {(f.customer_name || 'א').charAt(0).toUpperCase()}
                         </div>
-                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width:`${pct}%`, background: seg.color }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800">{f.customer_name || 'אנונימי'}</p>
+                          <p className="text-xs text-slate-400 truncate">{f.comment}</p>
                         </div>
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          {Array.from({length:5}).map((_,i) => (
+                            <span key={i} className={`text-xs ${i < f.rating ? 'text-amber-400' : 'text-slate-200'}`}>★</span>
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-slate-300 flex-shrink-0 whitespace-nowrap">
+                          {new Date(f.created_at).toLocaleDateString('he-IL')}
+                        </span>
                       </div>
-                    )
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* ── FEEDBACK ── */}
           {activeTab === 'feedback' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-100">
-                <h3 className="font-black text-slate-800">כל הביקורות הפרטיות</h3>
-                <p className="text-xs text-slate-400 mt-0.5">{feedback.length} ביקורות סה"כ</p>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden max-w-5xl">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="font-black text-slate-800">כל הביקורות הפרטיות</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{feedback.length} ביקורות סה"כ · דירוג ממוצע {avgRating} ★</p>
+                </div>
               </div>
               {feedback.length === 0 ? (
                 <div className="py-16 text-center text-slate-400 text-sm">אין ביקורות עדיין</div>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-50 text-xs text-slate-500 font-semibold">
+                    <tr className="bg-slate-50 text-[11px] text-slate-500 font-semibold">
                       <th className="text-right px-5 py-3">לקוח</th>
                       <th className="text-right px-5 py-3">הודעה</th>
                       <th className="text-center px-5 py-3">דירוג</th>
@@ -444,7 +428,7 @@ export default function DashboardPage() {
                         <td className="px-5 py-3 text-center">
                           <div className="flex items-center gap-0.5 justify-center">
                             {Array.from({length:5}).map((_,i) => (
-                              <Star key={i} size={12} className={i < f.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 fill-slate-200'} />
+                              <Star key={i} size={11} className={i < f.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 fill-slate-200'}/>
                             ))}
                           </div>
                         </td>
@@ -459,6 +443,92 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* ── ANALYTICS ── */}
+          {activeTab === 'analytics' && (
+            <div className="flex flex-col gap-4 max-w-5xl">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { label:'סריקות היום',   value: evDay(events,'view'),           color:'#f59e0b' },
+                  { label:'סריקות השבוע',  value: evWeek(events,'view'),          color:'#f59e0b' },
+                  { label:'גוגל היום',      value: evDay(events,'click_google'),   color:'#6366f1' },
+                  { label:'גוגל השבוע',     value: evWeek(events,'click_google'),  color:'#6366f1' },
+                ].map(s => (
+                  <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+                    <p className="text-[11px] text-slate-400 mb-1">{s.label}</p>
+                    <p className="text-2xl font-black text-slate-900">{s.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-black text-slate-800 text-sm">Reviews Overview — 30 יום</h3>
+                  <div className="flex items-center gap-4">
+                    {chartSeries.map(s => (
+                      <div key={s.key} className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{background:s.color}}/>
+                        <span className="text-[10px] text-slate-500">{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <ReviewsOverviewChart data={chartData} series={chartSeries}/>
+              </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <h3 className="font-black text-slate-800 text-sm mb-4">פילוח לחיצות</h3>
+                <div className="flex flex-col gap-3">
+                  {donutData.length === 0
+                    ? <p className="text-slate-400 text-sm text-center py-4">אין נתונים עדיין</p>
+                    : donutData.map(seg => {
+                        const total = donutData.reduce((s,g) => s+g.value,0) || 1
+                        const pct = Math.round((seg.value/total)*100)
+                        return (
+                          <div key={seg.label}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="font-semibold text-slate-700">{seg.label}</span>
+                              <span className="text-slate-400">{seg.value} · {pct}%</span>
+                            </div>
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all" style={{width:`${pct}%`, background:seg.color}}/>
+                            </div>
+                          </div>
+                        )
+                      })
+                  }
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TRENDS ── */}
+          {activeTab === 'trends' && (
+            <div className="flex flex-col gap-4 max-w-5xl">
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <h3 className="font-black text-slate-800 text-sm mb-4">מגמות דירוגים — 30 יום</h3>
+                {feedback.length === 0
+                  ? <p className="text-slate-400 text-sm text-center py-8">אין נתונים עדיין</p>
+                  : (
+                    <div className="flex flex-col gap-3">
+                      {[5,4,3,2,1].map(star => {
+                        const count = feedback.filter(f => f.rating === star).length
+                        const pct = Math.round((count / feedback.length) * 100)
+                        return (
+                          <div key={star} className="flex items-center gap-3">
+                            <span className="text-xs text-slate-500 w-4 text-left">{star}</span>
+                            <span className="text-amber-400 text-xs">★</span>
+                            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-amber-400 rounded-full" style={{width:`${pct}%`}}/>
+                            </div>
+                            <span className="text-xs text-slate-500 w-8 text-left">{count}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                }
+              </div>
+            </div>
+          )}
+
           {/* ── SETTINGS ── */}
           {activeTab === 'settings' && (
             <div className="max-w-lg">
@@ -467,8 +537,8 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {store.logo_url
-                      ? <Image src={store.logo_url} alt="" width={64} height={64} className="object-cover w-full h-full" />
-                      : <Store size={24} className="text-slate-300" />}
+                      ? <Image src={store.logo_url} alt="" width={64} height={64} className="object-cover w-full h-full"/>
+                      : <Store size={24} className="text-slate-300"/>}
                   </div>
                   <div>
                     <p className="font-black text-slate-900 text-lg">{store.name}</p>
@@ -483,8 +553,8 @@ export default function DashboardPage() {
                   <div className="flex justify-between py-2 border-b border-slate-50">
                     <span className="text-slate-400">קישור גוגל</span>
                     <a href={store.google_review_url} target="_blank" rel="noreferrer"
-                      className="text-indigo-600 hover:underline flex items-center gap-1">
-                      פתח <ExternalLink size={11} />
+                      className="text-amber-500 hover:underline flex items-center gap-1">
+                      פתח <ExternalLink size={11}/>
                     </a>
                   </div>
                   <div className="flex justify-between py-2">
@@ -493,8 +563,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <button onClick={() => setShowForm(true)}
-                  className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition">
-                  <Edit2 size={14} /> ערוך פרטים
+                  className="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-bold py-3 rounded-xl transition">
+                  <Edit2 size={14}/> ערוך פרטים
                 </button>
               </div>
             </div>
@@ -503,24 +573,29 @@ export default function DashboardPage() {
         </main>
       </div>
 
+      {/* Sidebar — RIGHT */}
+      <div className="hidden md:flex">
+        <Sidebar active={activeTab} setActive={setActiveTab} onLogout={handleLogout}/>
+      </div>
+
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 flex items-center justify-around py-2 z-20">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 flex items-center justify-around py-2 z-20" dir="rtl">
         {[
-          { id:'overview', icon: Home, label:'דשבורד' },
-          { id:'analytics', icon: BarChart2, label:'אנליטיקה' },
-          { id:'feedback', icon: MessageSquare, label:'ביקורות' },
-          { id:'settings', icon: Settings, label:'הגדרות' },
+          { id:'overview', icon: Home,           label:'דשבורד' },
+          { id:'feedback', icon: MessageSquare,  label:'ביקורות' },
+          { id:'analytics',icon: BarChart2,      label:'אנליטיקה' },
+          { id:'settings', icon: Settings,       label:'הגדרות' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setActiveTab(id)}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition ${activeTab===id ? 'text-indigo-600' : 'text-slate-400'}`}>
-            <Icon size={20} />
+            className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition ${activeTab===id ? 'text-amber-500' : 'text-slate-400'}`}>
+            <Icon size={20}/>
             <span className="text-[10px] font-semibold">{label}</span>
           </button>
         ))}
       </nav>
 
       {showForm && store && (
-        <StoreForm initial={store} onSave={handleSaveStore} onCancel={() => setShowForm(false)} />
+        <StoreForm initial={store} onSave={handleSaveStore} onCancel={() => setShowForm(false)}/>
       )}
     </div>
   )
