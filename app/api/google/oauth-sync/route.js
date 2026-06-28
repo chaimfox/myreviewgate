@@ -78,7 +78,10 @@ export async function POST() {
       )
       const accountsData = await accountsRes.json()
       const account = accountsData.accounts?.[0]
-      if (!account) return NextResponse.json({ error: 'No Google Business account found' }, { status: 404 })
+      if (!account) return NextResponse.json({
+        error: 'No Google Business account found',
+        debug: accountsData,
+      }, { status: 404 })
 
       const accountId = account.name.split('/')[1]
       const locRes = await fetch(
