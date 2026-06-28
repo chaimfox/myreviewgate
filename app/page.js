@@ -105,8 +105,8 @@ function DashboardMockup() {
     <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 w-full">
       {/* RTL: sidebar on RIGHT, content on LEFT */}
       <div className="flex flex-row-reverse">
-        {/* Sidebar — right side */}
-        <div className="bg-slate-900 w-40 flex-shrink-0 p-3" dir="rtl">
+        {/* Sidebar — right side, hidden on mobile */}
+        <div className="hidden md:block bg-slate-900 w-40 flex-shrink-0 p-3" dir="rtl">
           {/* Full logo */}
           <div className="flex items-center gap-2 px-2 py-2 mb-4">
             <div className="w-7 h-7 rounded-xl flex-shrink-0 flex items-center justify-center"
@@ -143,14 +143,15 @@ function DashboardMockup() {
           {/* Stats */}
           <div className="grid grid-cols-4 gap-2 mb-3">
             {[
-              { l:'Total Reviews', v:'2,543', g:'+36%' },
-              { l:'Average Rating', v:'4.6 ★★★★★', g:'+0.3' },
-              { l:'New Reviews', v:'127', g:'+12%' },
-              { l:'Response Rate', v:'92%', g:'+8%' },
+              { l:'Total Reviews', v:'2,543', g:'+36%', stars:null },
+              { l:'Average Rating', v:'4.6', g:'+0.3', stars:'★★★★★' },
+              { l:'New Reviews', v:'127', g:'+12%', stars:null },
+              { l:'Response Rate', v:'92%', g:'+8%', stars:null },
             ].map(s => (
-              <div key={s.l} className="border border-slate-100 rounded-xl p-2">
-                <p className="text-[7px] text-slate-400 mb-1">{s.l}</p>
+              <div key={s.l} className="border border-slate-100 rounded-xl p-2 overflow-hidden">
+                <p className="text-[7px] text-slate-400 mb-1 leading-tight">{s.l}</p>
                 <p className="text-xs font-black text-slate-900 leading-tight">{s.v}</p>
+                {s.stars && <p className="text-[8px] text-amber-400 leading-tight">{s.stars}</p>}
                 <p className="text-[7px] font-bold text-emerald-500">▲ {s.g}</p>
               </div>
             ))}
@@ -296,52 +297,76 @@ function HeroVisual() {
   const hubY   = totalH / 2
 
   return (
-    /* force LTR so layout is always: cards LEFT → hub CENTER → dashboard RIGHT */
-    <div dir="ltr" className="flex items-center justify-center gap-0 w-full max-w-5xl mx-auto px-4 select-none">
+    <div dir="ltr" className="w-full max-w-5xl mx-auto px-4 select-none">
 
-      {/* LEFT: platform cards */}
-      <div className="flex flex-col gap-2 flex-shrink-0 z-10">
-        {platforms.map(p => <PlatformCard key={p.name} {...p} />)}
-      </div>
+      {/* ── MOBILE layout (hidden on md+) ── */}
+      <div className="flex flex-col items-center gap-4 md:hidden">
 
-      {/* CENTER: dotted lines from each card → hub edge (not through it) */}
-      <div className="relative flex-shrink-0 z-10" style={{ width: 200, height: totalH }}>
-        {/* Hub sits at center: x=100, y=hubY */}
-        {/* Hub is 72px wide → radius 36. Lines end at x=100-36=64 */}
-        <svg width="200" height={totalH} viewBox={`0 0 200 ${totalH}`} className="absolute inset-0">
-          {platforms.map((p, i) => {
-            const cardY = i * cardH + cardH / 2 - 4
-            // straight line: horizontal from card, then diagonal to hub edge
-            const midX = 38
-            return (
-              <polyline key={p.name}
-                points={`0,${cardY} ${midX},${cardY} 64,${hubY}`}
-                fill="none" stroke={p.dotColor}
-                strokeWidth="1.5" strokeDasharray="5 4" strokeOpacity="0.9"
-                strokeLinejoin="round" strokeLinecap="round"/>
-            )
-          })}
-          {/* Straight arrow from hub right edge → dashboard */}
-          <line x1="136" y1={hubY} x2="188" y2={hubY} stroke="#0f172a" strokeWidth="1.5" strokeDasharray="4 3"/>
-          <polygon points={`182,${hubY-4} 200,${hubY} 182,${hubY+4}`} fill="#0f172a"/>
-        </svg>
+        {/* Platform logos row */}
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          {platforms.map(p => (
+            <div key={p.name} className="bg-white rounded-2xl shadow-sm border border-slate-100 px-3 py-2 flex items-center gap-2">
+              <p.Logo size={24} />
+              <span className="text-xs font-bold text-slate-700">{p.name}</span>
+            </div>
+          ))}
+        </div>
 
-        {/* Hub — exact brand logo: gradient rounded square + white star */}
-        <div className="absolute inset-0 flex items-center justify-center z-20">
-          <div className="w-18 h-18 rounded-3xl flex items-center justify-center shadow-2xl border-4 border-white"
-            style={{
-              width: 72, height: 72,
-              background: 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 50%,#ea8f00 100%)',
-              boxShadow: '0 8px 32px rgba(245,158,11,0.35)'
-            }}>
-            <Star size={32} className="text-white fill-white" />
+        {/* Arrow down + hub */}
+        <div className="flex flex-col items-center gap-1">
+          <svg width="2" height="20"><line x1="1" y1="0" x2="1" y2="20" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 3"/></svg>
+          <div className="rounded-2xl flex items-center justify-center shadow-lg border-2 border-white"
+            style={{ width:56, height:56, background:'linear-gradient(135deg,#fbbf24 0%,#f59e0b 50%,#ea8f00 100%)', boxShadow:'0 6px 20px rgba(245,158,11,0.35)' }}>
+            <Star size={24} className="text-white fill-white" />
           </div>
+          <svg width="2" height="20"><line x1="1" y1="0" x2="1" y2="16" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 3"/></svg>
+          <svg width="10" height="6"><polygon points="0,0 10,0 5,6" fill="#94a3b8"/></svg>
+        </div>
+
+        {/* Dashboard — full width on mobile */}
+        <div className="w-full rounded-2xl overflow-hidden shadow-xl border border-slate-200">
+          <DashboardMockup />
         </div>
       </div>
 
-      {/* RIGHT: dashboard mockup */}
-      <div className="flex-1 min-w-0 z-10">
-        <DashboardMockup />
+      {/* ── DESKTOP layout (hidden on mobile) ── */}
+      <div className="hidden md:flex items-center justify-center gap-0">
+
+        {/* LEFT: platform cards */}
+        <div className="flex flex-col gap-2 flex-shrink-0 z-10">
+          {platforms.map(p => <PlatformCard key={p.name} {...p} />)}
+        </div>
+
+        {/* CENTER: dotted lines → hub */}
+        <div className="relative flex-shrink-0 z-10" style={{ width: 200, height: totalH }}>
+          <svg width="200" height={totalH} viewBox={`0 0 200 ${totalH}`} className="absolute inset-0">
+            {platforms.map((p, i) => {
+              const cardY = i * cardH + cardH / 2 - 4
+              const midX = 38
+              return (
+                <polyline key={p.name}
+                  points={`0,${cardY} ${midX},${cardY} 64,${hubY}`}
+                  fill="none" stroke={p.dotColor}
+                  strokeWidth="1.5" strokeDasharray="5 4" strokeOpacity="0.9"
+                  strokeLinejoin="round" strokeLinecap="round"/>
+              )
+            })}
+            <line x1="136" y1={hubY} x2="188" y2={hubY} stroke="#0f172a" strokeWidth="1.5" strokeDasharray="4 3"/>
+            <polygon points={`182,${hubY-4} 200,${hubY} 182,${hubY+4}`} fill="#0f172a"/>
+          </svg>
+
+          <div className="absolute inset-0 flex items-center justify-center z-20">
+            <div className="rounded-3xl flex items-center justify-center shadow-2xl border-4 border-white"
+              style={{ width:72, height:72, background:'linear-gradient(135deg,#fbbf24 0%,#f59e0b 50%,#ea8f00 100%)', boxShadow:'0 8px 32px rgba(245,158,11,0.35)' }}>
+              <Star size={32} className="text-white fill-white" />
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: dashboard mockup */}
+        <div className="flex-1 min-w-0 z-10">
+          <DashboardMockup />
+        </div>
       </div>
     </div>
   )
