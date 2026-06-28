@@ -1,6 +1,9 @@
 import './globals.css'
 
 export const metadata = {
+  verification: {
+    google: 'hQ15G145tlT6WojhHJY6qGdTVFJ7jPL2BlzbZigHnuk',
+  },
   title: 'myReviewGate – ניהול חוות דעת חכם',
   description: 'הפוך כל לקוח למדרג מרוצה. myReviewGate מפנה ביקורות חיוביות לגוגל ושומר תלונות פרטיות.',
   metadataBase: new URL('https://myreviewgate.com'),
