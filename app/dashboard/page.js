@@ -236,6 +236,17 @@ function DashboardPage() {
       setGoogleBanner('connected')
       setTimeout(() => setGoogleBanner(null), 5000)
       window.history.replaceState({}, '', '/dashboard')
+      // Auto-sync all reviews after connecting
+      fetch('/api/google/oauth-sync', { method: 'POST' })
+        .then(r => r.json())
+        .then(() => fetch('/api/google/reviews', { cache: 'no-store' }).then(r => r.json()))
+        .then(d => {
+          setGoogleConnected(d.connected ?? false)
+          setGoogleReviews(d.reviews ?? [])
+          setGoogleRating(d.google_rating ?? null)
+          setGoogleTotal(d.google_review_count ?? null)
+        })
+        .catch(() => {})
     }
     if (searchParams.get('google_error')) {
       setGoogleBanner('error')
@@ -445,6 +456,23 @@ function DashboardPage() {
                   </svg>
                   <p className="text-sm font-semibold text-emerald-800 flex-1">Google Business מחובר ✓</p>
                   <span className="text-xs text-emerald-600 hidden sm:block">מתעדכן אוטומטית כל יום</span>
+                  <button
+                    onClick={async () => {
+                      setGoogleSyncing(true)
+                      try {
+                        await fetch('/api/google/oauth-sync', { method: 'POST' })
+                        const d = await fetch('/api/google/reviews', { cache: 'no-store' }).then(r => r.json())
+                        setGoogleReviews(d.reviews ?? [])
+                        setGoogleRating(d.google_rating ?? null)
+                        setGoogleTotal(d.google_review_count ?? null)
+                      } finally {
+                        setGoogleSyncing(false)
+                      }
+                    }}
+                    disabled={googleSyncing}
+                    className="text-xs text-emerald-600 hover:text-emerald-800 transition flex-shrink-0 font-semibold disabled:opacity-50">
+                    {googleSyncing ? 'מסנכרן...' : 'סנכרן עכשיו'}
+                  </button>
                   <button
                     onClick={async () => {
                       if (!confirm('להתנתק מ-Google Business?')) return
