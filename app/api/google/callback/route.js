@@ -20,74 +20,88 @@ export async function GET(request) {
     return NextResponse.redirect(`${siteUrl}/dashboard?google_error=1`)
   }
 
-  // Exchange code for tokens
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: `${siteUrl}/api/google/callback`,
-      grant_type: 'authorization_code',
-    }),
-  })
+  try {
+    // Exchange code for tokens
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: `${siteUrl}/api/google/callback`,
+        grant_type: 'authorization_code',
+      }),
+    })
 
-  const tokens = await tokenRes.json()
-  if (!tokens.access_token) {
-    return NextResponse.redirect(`${siteUrl}/dashboard?google_error=2`)
+    const tokens = await tokenRes.json()
+    if (!tokens.access_token) {
+      return NextResponse.redirect(`${siteUrl}/dashboard?google_error=2`)
+    }
+
+    const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000).toISOString()
+
+    // Try to get account + location — don't crash if it fails
+    let accountId = null
+    let locationName = null
+    try {
+      const accountsRes = await fetch(
+        'https://mybusiness.googleapis.com/v4/accounts',
+        { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+      )
+      const accountsData = await accountsRes.json()
+      const account = accountsData.accounts?.[0]
+      if (account) {
+        accountId = account.name
+        const locRes = await fetch(
+          `https://mybusiness.googleapis.com/v4/${account.name}/locations?pageSize=10`,
+          { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+        )
+        const locData = await locRes.json()
+        const loc = locData.locations?.[0]
+        if (loc) {
+          const locId = loc.name.split('/').pop()
+          locationName = `${account.name}/locations/${locId}`
+        }
+      }
+    } catch (_) {
+      // Location fetch failed — token still saved, user can sync later
+    }
+
+    // Get store_id for this user
+    const { data: store } = await svc()
+      .from('stores')
+      .select('id')
+      .eq('user_id', userId)
+      .single()
+
+    if (!store) {
+      return NextResponse.redirect(`${siteUrl}/dashboard?google_error=3`)
+    }
+
+    // Save tokens
+    await svc().from('google_oauth_tokens').upsert({
+      store_id: store.id,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token ?? null,
+      expires_at: expiresAt,
+      google_account_id: accountId,
+      google_location_name: locationName,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'store_id' })
+
+    // Trigger initial sync if we have a location
+    if (locationName) {
+      fetch(`${siteUrl}/api/google/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store_id: store.id }),
+      }).catch(() => {})
+    }
+
+    return NextResponse.redirect(`${siteUrl}/dashboard?google_connected=1`)
+  } catch (err) {
+    console.error('Google callback error:', err)
+    return NextResponse.redirect(`${siteUrl}/dashboard?google_error=500`)
   }
-
-  const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-
-  // Get their Google Business account + first location (v4 legacy API — no quota approval needed)
-  const accountsRes = await fetch(
-    'https://mybusiness.googleapis.com/v4/accounts',
-    { headers: { Authorization: `Bearer ${tokens.access_token}` } }
-  )
-  const accountsData = await accountsRes.json()
-  const account = accountsData.accounts?.[0]
-
-  let locationName = null
-  if (account) {
-    const locRes = await fetch(
-      `https://mybusiness.googleapis.com/v4/${account.name}/locations?pageSize=10`,
-      { headers: { Authorization: `Bearer ${tokens.access_token}` } }
-    )
-    const locData = await locRes.json()
-    const loc = locData.locations?.[0]
-    // Build full path: accounts/{id}/locations/{id}
-    locationName = loc ? `${account.name}/locations/${loc.name.split('/').pop()}` : null
-  }
-
-  // Get store_id for this user
-  const { data: store } = await svc()
-    .from('stores')
-    .select('id')
-    .eq('user_id', userId)
-    .single()
-
-  if (!store) {
-    return NextResponse.redirect(`${siteUrl}/dashboard?google_error=3`)
-  }
-
-  // Save tokens
-  await svc().from('google_oauth_tokens').upsert({
-    store_id: store.id,
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token ?? null,
-    expires_at: expiresAt,
-    google_account_id: account?.name ?? null,
-    google_location_name: locationName,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'store_id' })
-
-  // Trigger initial sync
-  await fetch(`${siteUrl}/api/google/sync`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ store_id: store.id }),
-  })
-
-  return NextResponse.redirect(`${siteUrl}/dashboard?google_connected=1`)
 }
