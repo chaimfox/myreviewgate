@@ -162,6 +162,7 @@ export default function AdminPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה')
+      alert('DEBUG: ' + JSON.stringify(data.debug))
       setSettingsSaved(true)
       setTimeout(() => setSettingsSaved(false), 3000)
     } catch (e) {

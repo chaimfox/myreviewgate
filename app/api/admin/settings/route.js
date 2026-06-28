@@ -29,33 +29,33 @@ export async function PUT(request) {
 
   const body = await request.json()
   const now = new Date().toISOString()
-  const errors = []
 
-  for (const [key, value] of Object.entries(body)) {
-    // Try UPDATE first
-    const { data: updated, error: updateErr } = await svc()
-      .from('site_settings')
-      .update({ value: String(value), updated_at: now })
-      .eq('key', key)
-      .select()
+  // Test with just contact_email to debug
+  const testKey = 'contact_email'
+  const testValue = body[testKey]
 
-    if (updateErr) {
-      errors.push(`update ${key}: ${updateErr.message}`)
-      continue
-    }
+  const { data: upData, error: upErr } = await svc()
+    .from('site_settings')
+    .update({ value: String(testValue ?? ''), updated_at: now })
+    .eq('key', testKey)
+    .select()
 
-    // If no row was updated, INSERT
-    if (!updated || updated.length === 0) {
-      const { error: insertErr } = await svc()
-        .from('site_settings')
-        .insert({ key, value: String(value), updated_at: now })
-      if (insertErr) errors.push(`insert ${key}: ${insertErr.message}`)
-    }
-  }
+  console.log('DEBUG update result:', JSON.stringify({ data: upData, error: upErr }))
 
-  if (errors.length > 0) {
-    console.error('settings save errors:', errors)
-    return NextResponse.json({ error: errors.join('; ') }, { status: 500 })
-  }
-  return NextResponse.json({ ok: true })
+  // Full save for all keys
+  const rows = Object.entries(body).map(([key, value]) => ({
+    key,
+    value: String(value),
+    updated_at: now,
+  }))
+
+  const { data: upsData, error: upsErr } = await svc()
+    .from('site_settings')
+    .upsert(rows, { onConflict: 'key' })
+    .select()
+
+  console.log('DEBUG upsert result:', JSON.stringify({ count: upsData?.length, error: upsErr }))
+
+  if (upsErr) return NextResponse.json({ error: upsErr.message, debug: { upData, upErr } }, { status: 500 })
+  return NextResponse.json({ ok: true, debug: { updateRows: upData, upsertRows: upsData?.length } })
 }
