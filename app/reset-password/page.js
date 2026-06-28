@@ -19,10 +19,17 @@ export default function ResetPasswordPage() {
   const [done,      setDone]      = useState(false)
   const [ready,     setReady]     = useState(false)
 
-  // Supabase puts the session tokens in the URL hash — we need to let it resolve
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
+    // 1. Check if Supabase already resolved the session from the URL hash
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true)
+    })
+
+    // 2. Also listen — in case the token is still being exchanged
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && session) {
+        setReady(true)
+      }
     })
     return () => subscription.unsubscribe()
   }, [supabase])
@@ -59,19 +66,28 @@ export default function ResetPasswordPage() {
               <h2 className="text-xl font-black text-slate-900">הסיסמה עודכנה!</h2>
               <p className="text-slate-500 text-sm">מעביר אותך ללוח הניהול...</p>
             </div>
+
           ) : !ready ? (
-            <div className="card p-8 text-center flex flex-col items-center gap-4">
-              <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-              <p className="text-slate-500 text-sm">מאמת את הקישור...</p>
-              <p className="text-slate-400 text-xs">אם עמוד זה לא נטען, ייתכן שהקישור פג תוקף.<br/>
-                <a href="/login" className="text-amber-600 font-bold hover:underline">בקש קישור חדש</a>
-              </p>
+            <div className="card p-8 text-center flex flex-col items-center gap-5">
+              <div className="w-10 h-10 border-[3px] border-amber-400 border-t-transparent rounded-full animate-spin" />
+              <div>
+                <p className="text-slate-700 font-bold text-sm">מאמת את הקישור...</p>
+                <p className="text-slate-400 text-xs mt-2">
+                  אם העמוד לא נפתח תוך כמה שניות,<br />
+                  ייתכן שהקישור פג תוקף.
+                </p>
+              </div>
+              <a href="/login"
+                className="text-xs text-amber-600 font-bold hover:underline">
+                בקש קישור חדש
+              </a>
             </div>
+
           ) : (
             <>
               <div className="mb-8">
                 <h1 className="text-2xl font-black text-slate-900">בחר סיסמה חדשה</h1>
-                <p className="text-slate-500 text-sm mt-1">הסיסמה חייבת להכיל לפחות 6 תווים</p>
+                <p className="text-slate-500 text-sm mt-1">לפחות 6 תווים</p>
               </div>
 
               <div className="card p-6">
@@ -86,6 +102,7 @@ export default function ResetPasswordPage() {
                         placeholder="לפחות 6 תווים"
                         required
                         dir="ltr"
+                        autoFocus
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition"
                       />
                       <button type="button" onClick={() => setShowPw(p => !p)}
@@ -102,7 +119,7 @@ export default function ResetPasswordPage() {
                       type={showPw ? 'text' : 'password'}
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
-                      placeholder="הקלד שוב את הסיסמה"
+                      placeholder="הקלד שוב"
                       required
                       dir="ltr"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition"
@@ -131,6 +148,7 @@ export default function ResetPasswordPage() {
               </div>
             </>
           )}
+
         </div>
       </main>
       <SiteFooter />

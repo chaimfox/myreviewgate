@@ -45,14 +45,18 @@ export default function LoginPage() {
     e.preventDefault()
     setResetLoading(true)
     setResetError(null)
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    })
-    setResetLoading(false)
-    if (authError) {
-      setResetError('לא הצלחנו לשלוח את המייל. בדוק את הכתובת ונסה שוב.')
-    } else {
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      })
+      if (!res.ok) throw new Error()
       setMode('sent')
+    } catch {
+      setResetError('לא הצלחנו לשלוח את המייל. בדוק את הכתובת ונסה שוב.')
+    } finally {
+      setResetLoading(false)
     }
   }
 
