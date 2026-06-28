@@ -29,33 +29,16 @@ export async function PUT(request) {
 
   const body = await request.json()
   const now = new Date().toISOString()
-
-  // Test with just contact_email to debug
-  const testKey = 'contact_email'
-  const testValue = body[testKey]
-
-  const { data: upData, error: upErr } = await svc()
-    .from('site_settings')
-    .update({ value: String(testValue ?? ''), updated_at: now })
-    .eq('key', testKey)
-    .select()
-
-  console.log('DEBUG update result:', JSON.stringify({ data: upData, error: upErr }))
-
-  // Full save for all keys
   const rows = Object.entries(body).map(([key, value]) => ({
     key,
     value: String(value),
     updated_at: now,
   }))
 
-  const { data: upsData, error: upsErr } = await svc()
+  const { error } = await svc()
     .from('site_settings')
     .upsert(rows, { onConflict: 'key' })
-    .select()
 
-  console.log('DEBUG upsert result:', JSON.stringify({ count: upsData?.length, error: upsErr }))
-
-  if (upsErr) return NextResponse.json({ error: upsErr.message, debug: { upData, upErr } }, { status: 500 })
-  return NextResponse.json({ ok: true, debug: { updateRows: upData, upsertRows: upsData?.length } })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
 }
