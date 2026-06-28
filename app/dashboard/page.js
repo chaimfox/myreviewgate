@@ -34,26 +34,94 @@ function thisMonth(arr) {
   return arr.filter(f => new Date(f.created_at) >= d).length
 }
 
-/* ── Multi-line Chart (SVG) ──────────────────────── */
+/* ── Area Chart (SVG) ──────────────────────────── */
 function ReviewsOverviewChart({ data, series }) {
-  const W = 500, H = 100, padX = 8, padY = 8
+  const W = 500, H = 140, padL = 28, padR = 8, padT = 12, padB = 24
+  const chartW = W - padL - padR
+  const chartH = H - padT - padB
   const maxVal = Math.max(...data.flatMap(d => series.map(s => d[s.key] || 0)), 1)
-  const xStep = (W - padX*2) / (data.length - 1)
+  const xStep = chartW / (data.length - 1)
+
+  // Show only every 5th label
+  const labelInterval = Math.ceil(data.length / 6)
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1]
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{overflow:'visible'}}>
+      {/* Grid lines */}
+      {gridLines.map(pct => {
+        const y = padT + (1 - pct) * chartH
+        return (
+          <g key={pct}>
+            <line x1={padL} x2={W - padR} y1={y} y2={y}
+              stroke="#f1f5f9" strokeWidth="1"/>
+            {pct > 0 && (
+              <text x={padL - 4} y={y + 3.5} textAnchor="end"
+                fontSize="7" fill="#94a3b8">
+                {Math.round(pct * maxVal)}
+              </text>
+            )}
+          </g>
+        )
+      })}
+
+      {/* Area fills */}
+      {[...series].reverse().map(s => {
+        const pts = data.map((d, i) => {
+          const x = padL + i * xStep
+          const y = padT + (1 - (d[s.key]||0) / maxVal) * chartH
+          return [x, y]
+        })
+        const pathD = `M ${pts[0][0]},${pts[0][1]} ` +
+          pts.slice(1).map(p => `L ${p[0]},${p[1]}`).join(' ') +
+          ` L ${pts[pts.length-1][0]},${padT + chartH} L ${pts[0][0]},${padT + chartH} Z`
+        return (
+          <path key={`area-${s.key}`} d={pathD}
+            fill={s.color} opacity="0.08"/>
+        )
+      })}
+
+      {/* Lines */}
       {series.map(s => {
         const pts = data.map((d, i) => {
-          const x = padX + i * xStep
-          const y = padY + (1 - (d[s.key]||0) / maxVal) * (H - padY*2)
+          const x = padL + i * xStep
+          const y = padT + (1 - (d[s.key]||0) / maxVal) * chartH
           return `${x},${y}`
         }).join(' ')
         return (
           <polyline key={s.key} points={pts}
-            fill="none" stroke={s.color} strokeWidth="2"
+            fill="none" stroke={s.color} strokeWidth="1.8"
             strokeLinecap="round" strokeLinejoin="round"/>
         )
       })}
+
+      {/* Dots on last point */}
+      {series.map(s => {
+        const last = data[data.length - 1]
+        const x = padL + (data.length - 1) * xStep
+        const y = padT + (1 - (last[s.key]||0) / maxVal) * chartH
+        return (
+          <circle key={`dot-${s.key}`} cx={x} cy={y} r="3"
+            fill={s.color} stroke="white" strokeWidth="1.5"/>
+        )
+      })}
+
+      {/* X labels */}
+      {data.map((d, i) => {
+        if (i % labelInterval !== 0 && i !== data.length - 1) return null
+        const x = padL + i * xStep
+        return (
+          <text key={i} x={x} y={H - 4} textAnchor="middle"
+            fontSize="7" fill="#94a3b8">
+            {d.label}
+          </text>
+        )
+      })}
+
+      {/* Baseline */}
+      <line x1={padL} x2={W - padR} y1={padT + chartH} y2={padT + chartH}
+        stroke="#e2e8f0" strokeWidth="1"/>
     </svg>
   )
 }
