@@ -28,12 +28,34 @@ export async function PUT(request) {
   if (profile?.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
-  const rows = Object.entries(body).map(([key, value]) => ({
-    key,
-    value: String(value),
-  }))
+  const now = new Date().toISOString()
+  const errors = []
 
-  const { error } = await svc().from('site_settings').upsert(rows, { onConflict: 'key' })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  for (const [key, value] of Object.entries(body)) {
+    // Try UPDATE first
+    const { data: updated, error: updateErr } = await svc()
+      .from('site_settings')
+      .update({ value: String(value), updated_at: now })
+      .eq('key', key)
+      .select()
+
+    if (updateErr) {
+      errors.push(`update ${key}: ${updateErr.message}`)
+      continue
+    }
+
+    // If no row was updated, INSERT
+    if (!updated || updated.length === 0) {
+      const { error: insertErr } = await svc()
+        .from('site_settings')
+        .insert({ key, value: String(value), updated_at: now })
+      if (insertErr) errors.push(`insert ${key}: ${insertErr.message}`)
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error('settings save errors:', errors)
+    return NextResponse.json({ error: errors.join('; ') }, { status: 500 })
+  }
   return NextResponse.json({ ok: true })
 }
