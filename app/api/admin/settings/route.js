@@ -11,9 +11,16 @@ const svc = () => createClient(
 )
 
 export async function GET() {
-  const { data, error } = await svc().from('site_settings').select('key, value')
+  const { data, error } = await svc()
+    .from('site_settings')
+    .select('key, value')
+    .order('id', { ascending: false })
   if (error) return NextResponse.json({})
-  const result = Object.fromEntries(data.map((r) => [r.key, r.value]))
+  // If duplicate keys exist, first one (latest) wins
+  const result = {}
+  for (const row of (data ?? [])) {
+    if (!(row.key in result)) result[row.key] = row.value
+  }
   return NextResponse.json(result, {
     headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
   })

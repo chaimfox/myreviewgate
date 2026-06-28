@@ -15,7 +15,7 @@ export default function ContactPage() {
   const { langCode, handleLangChange } = useLang()
 
   useEffect(() => {
-    fetch('/api/admin/settings').then((r) => r.json()).then(setSettings).catch(() => {})
+    fetch(`/api/admin/settings?t=${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then(setSettings).catch(() => {})
   }, [])
 
   async function handleSubmit(e) {
