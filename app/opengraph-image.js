@@ -74,7 +74,7 @@ export default function OGImage() {
           maxWidth: '700px',
           lineHeight: 1.4,
         }}>
-          הפוך כל לקוח למדרג מרוצה
+          Turn every customer into a 5-star review
         </div>
 
         {/* Platform pills */}

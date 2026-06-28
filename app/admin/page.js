@@ -154,14 +154,21 @@ export default function AdminPage() {
 
   async function saveSettings() {
     setSettingsSaving(true)
-    await fetch('/api/admin/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(siteSettings),
-    })
-    setSettingsSaving(false)
-    setSettingsSaved(true)
-    setTimeout(() => setSettingsSaved(false), 3000)
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(siteSettings),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      setSettingsSaved(true)
+      setTimeout(() => setSettingsSaved(false), 3000)
+    } catch (e) {
+      alert('שגיאה בשמירה: ' + e.message)
+    } finally {
+      setSettingsSaving(false)
+    }
   }
 
   async function updateStoreStatus(storeId, status, blockedReason) {

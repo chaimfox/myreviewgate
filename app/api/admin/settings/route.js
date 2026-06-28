@@ -31,7 +31,6 @@ export async function PUT(request) {
   const rows = Object.entries(body).map(([key, value]) => ({
     key,
     value: String(value),
-    updated_at: new Date().toISOString(),
   }))
 
   const { error } = await svc().from('site_settings').upsert(rows, { onConflict: 'key' })
