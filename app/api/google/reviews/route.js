@@ -20,7 +20,7 @@ export async function GET() {
 
   const { data: tokenRow } = await svc()
     .from('google_oauth_tokens')
-    .select('google_location_name, updated_at')
+    .select('store_id')
     .eq('store_id', store.id)
     .single()
 
@@ -30,8 +30,10 @@ export async function GET() {
     .eq('store_id', store.id)
     .order('published_at', { ascending: false })
 
+  const connected = !!store.google_place_id || !!tokenRow
+
   return NextResponse.json({
-    connected: !!store.google_place_id,
+    connected,
     google_rating: store.google_rating,
     google_review_count: store.google_review_count,
     reviews: reviews ?? [],
