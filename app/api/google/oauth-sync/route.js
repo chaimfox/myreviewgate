@@ -72,25 +72,30 @@ export async function POST() {
 
     // If no location saved yet, try to fetch it now
     if (!locationPath) {
+      // Try v4 API (older but different quota)
       const accountsRes = await fetch(
-        'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
+        'https://mybusiness.googleapis.com/v4/accounts',
         { headers: { Authorization: `Bearer ${accessToken}` } }
       )
-      const accountsData = await accountsRes.json()
+      const accountsText = await accountsRes.text()
+      let accountsData
+      try { accountsData = JSON.parse(accountsText) } catch { accountsData = {} }
+
       const account = accountsData.accounts?.[0]
       if (!account) return NextResponse.json({
         error: 'No Google Business account found',
         debug: accountsData,
+        raw: accountsText.slice(0, 300),
       }, { status: 404 })
 
       const accountId = account.name.split('/')[1]
       const locRes = await fetch(
-        `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name`,
+        `https://mybusiness.googleapis.com/v4/${account.name}/locations?pageSize=10`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       )
       const locData = await locRes.json()
       const loc = locData.locations?.[0]
-      if (!loc) return NextResponse.json({ error: 'No business location found' }, { status: 404 })
+      if (!loc) return NextResponse.json({ error: 'No business location found', debug: locData }, { status: 404 })
 
       const locationId = loc.name.split('/')[1]
       locationPath = `accounts/${accountId}/locations/${locationId}`
