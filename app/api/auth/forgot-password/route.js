@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { sendPasswordResetEmail } from '@/lib/email'
 
 export async function POST(request) {
   const { email } = await request.json()
@@ -11,7 +10,8 @@ export async function POST(request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
-  const { data, error } = await admin.auth.admin.generateLink({
+  // Supabase sends the reset email automatically (via our custom Gmail SMTP in dashboard)
+  await admin.auth.admin.generateLink({
     type: 'recovery',
     email,
     options: {
@@ -19,13 +19,6 @@ export async function POST(request) {
     },
   })
 
-  if (error) {
-    // Don't expose whether the email exists — always return OK
-    console.error('[forgot-password]', error.message)
-    return NextResponse.json({ ok: true })
-  }
-
-  await sendPasswordResetEmail({ email, resetLink: data.properties.action_link })
-
+  // Always return OK — don't expose whether the email exists
   return NextResponse.json({ ok: true })
 }
