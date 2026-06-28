@@ -8,7 +8,7 @@ export async function middleware(req) {
 
   // ── Slug pages: block suspended stores before the page even renders ──
   const isSlugPage = /^\/[^/]+$/.test(pathname) &&
-    !['/', '/login', '/register', '/privacy', '/terms', '/contact', '/accessibility'].includes(pathname) &&
+    !['/', '/login', '/register', '/privacy', '/terms', '/contact', '/accessibility', '/reset-password'].includes(pathname) &&
     !pathname.startsWith('/api') &&
     !pathname.startsWith('/_next')
 
