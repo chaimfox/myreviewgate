@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
@@ -143,7 +143,7 @@ function Sidebar({ active, setActive, onLogout }) {
 }
 
 /* ── Main Dashboard ──────────────────────────────── */
-export default function DashboardPage() {
+function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClientComponentClient()
@@ -746,5 +746,13 @@ export default function DashboardPage() {
         <StoreForm initial={store} onSave={handleSaveStore} onCancel={() => setShowForm(false)}/>
       )}
     </div>
+  )
+}
+
+export default function DashboardPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"/></div>}>
+      <DashboardPage />
+    </Suspense>
   )
 }
