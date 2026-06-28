@@ -40,9 +40,9 @@ export async function GET(request) {
 
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
-  // Get their Google Business account + first location
+  // Get their Google Business account + first location (v4 legacy API — no quota approval needed)
   const accountsRes = await fetch(
-    'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
+    'https://mybusiness.googleapis.com/v4/accounts',
     { headers: { Authorization: `Bearer ${tokens.access_token}` } }
   )
   const accountsData = await accountsRes.json()
@@ -51,11 +51,13 @@ export async function GET(request) {
   let locationName = null
   if (account) {
     const locRes = await fetch(
-      `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name,title`,
+      `https://mybusiness.googleapis.com/v4/${account.name}/locations?pageSize=10`,
       { headers: { Authorization: `Bearer ${tokens.access_token}` } }
     )
     const locData = await locRes.json()
-    locationName = locData.locations?.[0]?.name ?? null
+    const loc = locData.locations?.[0]
+    // Build full path: accounts/{id}/locations/{id}
+    locationName = loc ? `${account.name}/locations/${loc.name.split('/').pop()}` : null
   }
 
   // Get store_id for this user

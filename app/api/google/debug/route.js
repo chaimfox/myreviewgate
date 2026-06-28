@@ -20,9 +20,9 @@ export async function GET() {
 
   if (!tokenRow) return NextResponse.json({ error: 'no token row' })
 
-  // Test accounts API
+  // Test accounts API (v4 legacy)
   const accountsRes = await fetch(
-    'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
+    'https://mybusiness.googleapis.com/v4/accounts',
     { headers: { Authorization: `Bearer ${tokenRow.access_token}` } }
   )
   const accounts = await accountsRes.json()
@@ -32,7 +32,7 @@ export async function GET() {
   const accountName = accounts.accounts?.[0]?.name
   if (accountName) {
     const locRes = await fetch(
-      `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?readMask=name,title`,
+      `https://mybusiness.googleapis.com/v4/${accountName}/locations?pageSize=10`,
       { headers: { Authorization: `Bearer ${tokenRow.access_token}` } }
     )
     locations = await locRes.json()
