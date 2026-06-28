@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { sendNewStoreAdminEmail } from '@/lib/email'
 
 export async function POST(req) {
   const { userId, name, slug, googleUrl, ownerEmail, fullName, email } = await req.json()
@@ -42,6 +43,14 @@ export async function POST(req) {
       : error.message
     return NextResponse.json({ error: msg }, { status: 500 })
   }
+
+  // Notify admin about new pending store
+  await sendNewStoreAdminEmail({
+    storeName: name,
+    slug,
+    ownerEmail,
+    ownerName: fullName,
+  })
 
   return NextResponse.json({ ok: true })
 }

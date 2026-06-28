@@ -49,18 +49,23 @@ export default function FeedbackForm({ storeId, onSubmitted, t }) {
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const { error: dbError } = await supabase.from('feedback').insert({
-        store_id: storeId,
-        rating,
-        comment: comment.trim(),
-        customer_id: session?.user?.id ?? null,
-        customer_phone: phone.trim() || null,
-        customer_name: email.trim() || null, // reuse customer_name col for email
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId,
+          rating,
+          comment: comment.trim(),
+          customerId: session?.user?.id ?? null,
+          customerPhone: phone.trim() || null,
+          customerEmail: email.trim() || null,
+        }),
       })
-      if (dbError) throw dbError
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
       onSubmitted()
     } catch (err) {
-      setError(t.errorMsg)
+      setError(err.message || t.errorMsg)
       console.error(err)
     } finally {
       setLoading(false)

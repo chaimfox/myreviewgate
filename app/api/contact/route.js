@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { sendContactAdminEmail } from '@/lib/email'
 
 const svc = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -13,5 +14,8 @@ export async function POST(request) {
   }
   const { error } = await svc().from('contact_messages').insert({ name, email, subject, message })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await sendContactAdminEmail({ name, email, subject, message })
+
   return NextResponse.json({ ok: true })
 }
