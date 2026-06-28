@@ -446,8 +446,8 @@ function DashboardPage() {
                     {[
                       { label:'סה"כ ביקורות', value: combinedTotal.toLocaleString(), sub: `${totalGoogleReviews} Google · ${totalPrivate} פרטיות` },
                       { label:'דירוג ממוצע', value: combinedAvg, stars: parseFloat(combinedAvg), sub: 'ממוצע כולל' },
-                      { label:'חדשות החודש', value: newThisMonth.toString(), sub: newThisMonth > 0 ? 'ביקורות פרטיות' : 'ביקורות פרטיות' },
-                      { label:'שיעור מענה', value: `${responseRate}%`, sub: totalScans > 0 ? `מתוך ${totalScans} סריקות` : 'סריקות' },
+                      { label:'חדשות החודש', value: newThisMonth.toString(), sub: 'ביקורות פרטיות' },
+                      { label:'סריקות NFC', value: (store.nfc_scans ?? 0).toLocaleString(), sub: 'סה"כ כניסות לדף' },
                     ].map(s => (
                       <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                         <p className="text-[11px] text-slate-400 mb-1 font-medium">{s.label}</p>
@@ -567,30 +567,42 @@ function DashboardPage() {
                 )
               })()}
 
-              {/* Rating distribution (trends) */}
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                <h3 className="font-black text-slate-800 text-sm mb-4">פילוח דירוגים</h3>
-                {feedback.length === 0 ? (
-                  <p className="text-slate-400 text-sm text-center py-4">אין ביקורות פרטיות עדיין</p>
-                ) : (
-                  <div className="flex flex-col gap-2.5">
-                    {[5,4,3,2,1].map(star => {
-                      const count = feedback.filter(f => f.rating === star).length
-                      const pct = Math.round((count / feedback.length) * 100)
-                      return (
-                        <div key={star} className="flex items-center gap-3">
-                          <span className="text-xs font-semibold text-slate-500 w-3 text-left">{star}</span>
-                          <span className="text-amber-400 text-xs">★</span>
-                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-400 rounded-full transition-all" style={{width:`${pct}%`}}/>
-                          </div>
-                          <span className="text-xs text-slate-400 w-8 text-left">{count}</span>
-                        </div>
-                      )
-                    })}
+              {/* Rating distribution — all sources */}
+              {(() => {
+                const allRated = [
+                  ...googleReviews.filter(r => r.rating).map(r => ({ rating: r.rating })),
+                  ...feedback.filter(f => f.rating).map(f => ({ rating: f.rating })),
+                ]
+                const total = allRated.length
+                return (
+                  <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-black text-slate-800 text-sm">פילוח דירוגים</h3>
+                      <span className="text-[10px] text-slate-400">{total} ביקורות עם דירוג</span>
+                    </div>
+                    {total === 0 ? (
+                      <p className="text-slate-400 text-sm text-center py-4">אין ביקורות עדיין</p>
+                    ) : (
+                      <div className="flex flex-col gap-2.5">
+                        {[5,4,3,2,1].map(star => {
+                          const count = allRated.filter(r => Math.round(r.rating) === star).length
+                          const pct = Math.round((count / total) * 100)
+                          return (
+                            <div key={star} className="flex items-center gap-3">
+                              <span className="text-xs font-semibold text-slate-500 w-3 text-left">{star}</span>
+                              <span className="text-amber-400 text-xs">★</span>
+                              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-amber-400 rounded-full transition-all" style={{width:`${pct}%`}}/>
+                              </div>
+                              <span className="text-xs text-slate-400 w-8 text-left">{count}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                )
+              })()}
             </div>
           )}
 

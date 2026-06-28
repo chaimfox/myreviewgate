@@ -8,19 +8,27 @@ import Link from 'next/link'
 // Always fetch fresh — never serve stale store data from cache
 export const dynamic = 'force-dynamic'
 
+const svc = () => createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
+
 async function getStore(slug) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
-  const { data, error } = await supabase
+  const { data, error } = await svc()
     .from('stores')
-    .select('id, name, logo_url, google_review_url, custom_links, status')
+    .select('id, name, logo_url, google_review_url, custom_links, status, nfc_scans')
     .eq('slug', slug)
     .single()
 
   if (error || !data) return null
   return data
+}
+
+async function recordScan(storeId, current) {
+  await svc()
+    .from('stores')
+    .update({ nfc_scans: (current ?? 0) + 1 })
+    .eq('id', storeId)
 }
 
 export async function generateMetadata({ params }) {
@@ -57,6 +65,9 @@ export default async function SlugPage({ params }) {
   const store = await getStore(params.slug)
 
   if (!store) notFound()
+
+  // Count every visit as an NFC scan (fire-and-forget)
+  recordScan(store.id, store.nfc_scans).catch(() => {})
 
   // Suspended store — show blocked page
   if (store.status === 'suspended') {
