@@ -552,7 +552,7 @@ export default function AdminPage() {
                 className="w-full px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition resize-y font-mono" />
             </div>
 
-            <button onClick={saveSettings} disabled={settingsSaving}
+            <button onClick={() => { alert('כפתור נלחץ! מייל: ' + siteSettings.contact_email); saveSettings() }} disabled={settingsSaving}
               className="self-start flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-black px-6 py-3 rounded-xl transition shadow-sm shadow-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600">
               {settingsSaving ? 'שומר...' : settingsSaved ? <><CheckCircle size={15} /> נשמר!</> : <><Save size={15} /> שמור הגדרות</>}
             </button>
