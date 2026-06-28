@@ -15,7 +15,14 @@ export async function GET() {
   if (error) return NextResponse.json({}, { headers: { 'Cache-Control': 'no-store' } })
   const result = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]))
   return NextResponse.json(result, {
-    headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      'Surrogate-Control': 'no-store',
+      'CDN-Cache-Control': 'no-store',
+      'Vercel-CDN-Cache-Control': 'no-store',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
   })
 }
 
