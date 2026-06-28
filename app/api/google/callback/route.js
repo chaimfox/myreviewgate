@@ -41,31 +41,33 @@ export async function GET(request) {
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000).toISOString()
 
-    // Try to get account + location — don't crash if it fails
+    // Try to get account and location using new Business Profile API
     let accountId = null
     let locationName = null
     try {
       const accountsRes = await fetch(
-        'https://mybusiness.googleapis.com/v4/accounts',
+        'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
         { headers: { Authorization: `Bearer ${tokens.access_token}` } }
       )
       const accountsData = await accountsRes.json()
       const account = accountsData.accounts?.[0]
+
       if (account) {
-        accountId = account.name
+        accountId = account.name // e.g. "accounts/123456"
+        const accountId_short = account.name.split('/')[1]
+
         const locRes = await fetch(
-          `https://mybusiness.googleapis.com/v4/${account.name}/locations?pageSize=10`,
+          `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name,title`,
           { headers: { Authorization: `Bearer ${tokens.access_token}` } }
         )
         const locData = await locRes.json()
         const loc = locData.locations?.[0]
         if (loc) {
-          const locId = loc.name.split('/').pop()
-          locationName = `${account.name}/locations/${locId}`
+          locationName = loc.name // e.g. "locations/123456"
         }
       }
     } catch (_) {
-      // Location fetch failed — token still saved, user can sync later
+      // Location fetch failed — token still saved
     }
 
     // Get store_id for this user
@@ -90,18 +92,8 @@ export async function GET(request) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'store_id' })
 
-    // Trigger initial sync if we have a location
-    if (locationName) {
-      fetch(`${siteUrl}/api/google/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ store_id: store.id }),
-      }).catch(() => {})
-    }
-
     return NextResponse.redirect(`${siteUrl}/dashboard?google_connected=1`)
   } catch (err) {
-    console.error('Google callback error:', err)
     return NextResponse.redirect(`${siteUrl}/dashboard?google_error=500`)
   }
 }
