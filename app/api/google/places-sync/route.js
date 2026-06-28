@@ -27,7 +27,7 @@ export async function POST(request) {
 
   // Fetch reviews from Places API (New)
   const res = await fetch(
-    `https://places.googleapis.com/v1/places/${place_id}?fields=reviews,displayName,rating&languageCode=iw`,
+    `https://places.googleapis.com/v1/places/${place_id}?fields=reviews,displayName,rating,userRatingCount&languageCode=iw`,
     {
       headers: {
         'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY,
@@ -37,17 +37,15 @@ export async function POST(request) {
   )
 
   const data = await res.json()
+  if (data.error) return NextResponse.json({ error: data.error.message }, { status: 400 })
 
-  if (data.error) {
-    return NextResponse.json({ error: data.error.message }, { status: 400 })
-  }
+  // Save overall rating + count to store
+  await svc().from('stores').update({
+    google_rating: data.rating ?? null,
+    google_review_count: data.userRatingCount ?? null,
+  }).eq('id', store.id)
 
   const reviews = data.reviews ?? []
-
-  if (reviews.length === 0) {
-    return NextResponse.json({ synced: 0, business_name: data.displayName?.text })
-  }
-
   const rows = reviews.map(r => ({
     store_id: store.id,
     google_review_id: r.name ?? `${place_id}_${r.publishTime}`,
@@ -59,15 +57,17 @@ export async function POST(request) {
     synced_at: new Date().toISOString(),
   }))
 
-  const { error } = await svc()
-    .from('google_reviews')
-    .upsert(rows, { onConflict: 'store_id,google_review_id' })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (rows.length > 0) {
+    const { error } = await svc()
+      .from('google_reviews')
+      .upsert(rows, { onConflict: 'store_id,google_review_id' })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({
     synced: rows.length,
     business_name: data.displayName?.text,
     overall_rating: data.rating,
+    total_reviews: data.userRatingCount,
   })
 }

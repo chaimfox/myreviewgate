@@ -15,7 +15,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: store } = await supabase.from('stores').select('id').eq('user_id', user.id).single()
+  const { data: store } = await supabase.from('stores').select('id, google_place_id, google_rating, google_review_count').eq('user_id', user.id).single()
   if (!store) return NextResponse.json({ reviews: [], connected: false })
 
   const { data: tokenRow } = await svc()
@@ -31,9 +31,9 @@ export async function GET() {
     .order('published_at', { ascending: false })
 
   return NextResponse.json({
-    connected: !!tokenRow,
-    location: tokenRow?.google_location_name ?? null,
-    last_sync: tokenRow?.updated_at ?? null,
+    connected: !!store.google_place_id,
+    google_rating: store.google_rating,
+    google_review_count: store.google_review_count,
     reviews: reviews ?? [],
   }, { headers: { 'Cache-Control': 'no-store' } })
 }

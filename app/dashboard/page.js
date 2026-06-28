@@ -110,9 +110,10 @@ function PendingScreen({ store, onLogout }) {
 function Sidebar({ active, setActive, onLogout }) {
   const nav = [
     { id: 'overview',       label: 'דשבורד',         icon: Home },
+    { id: 'all_reviews',    label: 'כל הביקורות',    icon: Star },
     { id: 'feedback',       label: 'ביקורות פרטיות', icon: MessageSquare },
-    { id: 'google_reviews', label: 'ביקורות Google',  icon: Star },
-    { id: 'analytics',      label: 'אנליטיקה',        icon: BarChart2 },
+    { id: 'google_reviews', label: 'ביקורות Google',  icon: BarChart2 },
+    { id: 'analytics',      label: 'אנליטיקה',        icon: MousePointerClick },
     { id: 'trends',         label: 'מגמות',           icon: TrendingUp },
     { id: 'settings',       label: 'הגדרות',          icon: Settings },
   ]
@@ -155,6 +156,8 @@ function DashboardPage() {
   const [googleReviews,    setGoogleReviews]    = useState([])
   const [googleConnected,  setGoogleConnected]  = useState(false)
   const [googleSyncing,    setGoogleSyncing]    = useState(false)
+  const [googleRating,     setGoogleRating]     = useState(null)
+  const [googleTotal,      setGoogleTotal]      = useState(null)
   const [placeId,          setPlaceId]          = useState('')
   const [placeIdSaving,    setPlaceIdSaving]    = useState(false)
   const [placeIdMsg,       setPlaceIdMsg]       = useState(null)
@@ -204,6 +207,8 @@ function DashboardPage() {
         .then(d => {
           setGoogleConnected(d.connected ?? false)
           setGoogleReviews(d.reviews ?? [])
+          setGoogleRating(d.google_rating ?? null)
+          setGoogleTotal(d.google_review_count ?? null)
         })
         .catch(() => {})
 
@@ -235,9 +240,11 @@ function DashboardPage() {
       const d = await res.json()
       if (res.ok) {
         setGoogleConnected(true)
-        setPlaceIdMsg({ ok: true, text: `נמשכו ${d.synced} ביקורות${d.business_name ? ` מ-${d.business_name}` : ''}` })
+        setPlaceIdMsg({ ok: true, text: `נמשכו ${d.synced} ביקורות${d.business_name ? ` מ-${d.business_name}` : ''}${d.overall_rating ? ` · דירוג ${d.overall_rating}★ מתוך ${d.total_reviews} ביקורות` : ''}` })
         const gr = await fetch('/api/google/reviews', { cache: 'no-store' }).then(r => r.json())
         setGoogleReviews(gr.reviews ?? [])
+        setGoogleRating(gr.google_rating ?? null)
+        setGoogleTotal(gr.google_review_count ?? null)
       } else {
         setPlaceIdMsg({ ok: false, text: d.error ?? 'שגיאה' })
       }
@@ -306,7 +313,7 @@ function DashboardPage() {
         <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between" dir="rtl">
           <div>
             <h1 className="text-lg font-black text-slate-900">
-              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'analytics' ? 'אנליטיקה' : activeTab === 'feedback' ? 'ביקורות פרטיות' : activeTab === 'google_reviews' ? 'ביקורות Google' : activeTab === 'trends' ? 'מגמות' : 'הגדרות'}
+              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'all_reviews' ? 'כל הביקורות' : activeTab === 'analytics' ? 'אנליטיקה' : activeTab === 'feedback' ? 'ביקורות פרטיות' : activeTab === 'google_reviews' ? 'ביקורות Google' : activeTab === 'trends' ? 'מגמות' : 'הגדרות'}
             </h1>
             <p className="text-xs text-slate-400">{today}</p>
           </div>
@@ -466,6 +473,78 @@ function DashboardPage() {
             </div>
           )}
 
+          {/* ── ALL REVIEWS ── */}
+          {activeTab === 'all_reviews' && (() => {
+            const allReviews = [
+              ...googleReviews.map(r => ({ ...r, source: 'google' })),
+              ...feedback.map(f => ({ ...f, source: 'private' })),
+            ].sort((a, b) => new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at))
+
+            return (
+              <div className="flex flex-col gap-4 max-w-5xl">
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                    <p className="text-[11px] text-slate-400 mb-1">סה"כ ביקורות Google</p>
+                    <p className="text-2xl font-black text-slate-900">{googleTotal?.toLocaleString() ?? '—'}</p>
+                    {googleRating && <p className="text-xs text-amber-500 font-bold mt-0.5">{Number(googleRating).toFixed(1)} ★</p>}
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                    <p className="text-[11px] text-slate-400 mb-1">ביקורות פרטיות</p>
+                    <p className="text-2xl font-black text-slate-900">{feedback.length}</p>
+                    {feedback.length > 0 && <p className="text-xs text-amber-500 font-bold mt-0.5">{avgRating} ★</p>}
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                    <p className="text-[11px] text-slate-400 mb-1">מוצגות כאן</p>
+                    <p className="text-2xl font-black text-slate-900">{allReviews.length}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">5 Google + כל הפרטיות</p>
+                  </div>
+                </div>
+
+                {/* Unified list */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-slate-100">
+                    <h3 className="font-black text-slate-800">כל הביקורות</h3>
+                  </div>
+                  {allReviews.length === 0 ? (
+                    <div className="py-16 text-center text-slate-400 text-sm">אין ביקורות עדיין</div>
+                  ) : (
+                    <div className="divide-y divide-slate-50">
+                      {allReviews.map(r => (
+                        <div key={r.id} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50 transition">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm overflow-hidden ${r.source === 'google' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                            {r.author_photo
+                              ? <img src={r.author_photo} alt="" className="w-full h-full object-cover" />
+                              : (r.author_name || r.customer_name || 'א').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-slate-800 text-sm">{r.author_name || r.customer_name || 'אנונימי'}</p>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.source === 'google' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                                {r.source === 'google' ? 'Google' : 'פרטי'}
+                              </span>
+                              <div className="flex items-center gap-0.5">
+                                {Array.from({length:5}).map((_,i) => (
+                                  <span key={i} className={`text-xs ${i < r.rating ? 'text-amber-400' : 'text-slate-200'}`}>★</span>
+                                ))}
+                              </div>
+                              <span className="text-[10px] text-slate-400">
+                                {new Date(r.published_at || r.created_at).toLocaleDateString('he-IL')}
+                              </span>
+                            </div>
+                            {(r.comment || r.feedback) && (
+                              <p className="text-xs text-slate-500 mt-1 leading-relaxed">{r.comment || r.feedback}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* ── FEEDBACK ── */}
           {activeTab === 'feedback' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden max-w-5xl">
@@ -562,15 +641,39 @@ function DashboardPage() {
                 </p>
               </div>
 
-              {/* Reviews list */}
+              {/* Google stats */}
+              {googleConnected && googleRating && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                    <p className="text-[11px] text-slate-400 mb-1">דירוג ממוצע ב-Google</p>
+                    <div className="flex items-end gap-2">
+                      <p className="text-3xl font-black text-slate-900">{Number(googleRating).toFixed(1)}</p>
+                      <div className="flex items-center gap-0.5 mb-1">
+                        {Array.from({length:5}).map((_,i) => (
+                          <span key={i} className={`text-sm ${i < Math.round(googleRating) ? 'text-amber-400' : 'text-slate-200'}`}>★</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                    <p className="text-[11px] text-slate-400 mb-1">סה"כ ביקורות ב-Google</p>
+                    <p className="text-3xl font-black text-slate-900">{googleTotal?.toLocaleString()}</p>
+                    <p className="text-[11px] text-slate-400 mt-1">5 האחרונות מוצגות</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Unified reviews list */}
               {googleConnected && (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                  <div className="px-5 py-4 border-b border-slate-100">
-                    <h3 className="font-black text-slate-800">ביקורות מ-Google</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">{googleReviews.length} ביקורות סה"כ</p>
+                  <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-black text-slate-800">ביקורות מ-Google</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">5 הביקורות האחרונות</p>
+                    </div>
                   </div>
                   {googleReviews.length === 0 ? (
-                    <div className="py-16 text-center text-slate-400 text-sm">אין ביקורות עדיין — לחץ "סנכרן"</div>
+                    <div className="py-16 text-center text-slate-400 text-sm">לחץ "משוך ביקורות" למעלה</div>
                   ) : (
                     <div className="divide-y divide-slate-50">
                       {googleReviews.map(r => (
