@@ -17,13 +17,13 @@ const ev     = (arr, type) => arr.filter(e => e.event_type === type).length
 const evDay  = (arr, type) => { const d = new Date(); d.setHours(0,0,0,0); return arr.filter(e => e.event_type === type && new Date(e.created_at) >= d).length }
 const evWeek = (arr, type) => { const d = new Date(); d.setDate(d.getDate()-7); return arr.filter(e => e.event_type === type && new Date(e.created_at) >= d).length }
 
-function monthlyData(events, types) {
+function monthlyData(eventsArr, types) {
   const days = Array.from({length:30}, (_,i) => { const d = new Date(); d.setDate(d.getDate()-29+i); return d })
   return days.map(day => {
     const next = new Date(day); next.setDate(next.getDate()+1)
     const counts = {}
     types.forEach(t => {
-      counts[t] = events.filter(e => e.event_type===t && new Date(e.created_at)>=day && new Date(e.created_at)<next).length
+      counts[t] = eventsArr.filter(e => e.event_type===t && new Date(e.created_at)>=day && new Date(e.created_at)<next).length
     })
     return { label: day.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'}), ...counts }
   })
@@ -234,6 +234,7 @@ function DashboardPage() {
   const [googleBanner,     setGoogleBanner]     = useState(null) // 'connected' | 'error'
   const [locations,        setLocations]        = useState([])
   const [chainInfo,        setChainInfo]        = useState(null)
+  const [selectedLocation, setSelectedLocation] = useState(null) // null = all chain
   const [showAddLocation,  setShowAddLocation]  = useState(false)
   const [locationForm,     setLocationForm]     = useState({ name: '', suffix: '', address: '', google_review_url: '' })
   const [locationSaving,   setLocationSaving]   = useState(false)
@@ -388,17 +389,29 @@ function DashboardPage() {
     </div>
   )
 
+  /* ── filter by selected location (for chains) ── */
+  const isChain = store?.type === 'chain'
+  const displayFeedback = isChain && selectedLocation
+    ? feedback.filter(f => f.location_id === selectedLocation.id)
+    : feedback
+  const displayEvents = isChain && selectedLocation
+    ? events.filter(e => e.location_id === selectedLocation.id)
+    : events
+  const displayNfcScans = isChain && selectedLocation
+    ? (selectedLocation.nfc_scans ?? 0)
+    : (store?.nfc_scans ?? 0)
+
   /* ── computed data ── */
-  const avgRating      = feedback.length ? (feedback.reduce((s,f) => s + (f.rating||0), 0) / feedback.length).toFixed(1) : '—'
-  const avgRatingNum   = feedback.length ? feedback.reduce((s,f) => s + (f.rating||0), 0) / feedback.length : 0
-  const totalScans     = ev(events, 'view')
-  const googleClicks   = ev(events, 'click_google')
-  const privateClicks  = ev(events, 'click_private')
-  const customClicks   = ev(events, 'click_custom')
-  const newThisMonth   = thisMonth(feedback)
+  const avgRating      = displayFeedback.length ? (displayFeedback.reduce((s,f) => s + (f.rating||0), 0) / displayFeedback.length).toFixed(1) : '—'
+  const avgRatingNum   = displayFeedback.length ? displayFeedback.reduce((s,f) => s + (f.rating||0), 0) / displayFeedback.length : 0
+  const totalScans     = ev(displayEvents, 'view')
+  const googleClicks   = ev(displayEvents, 'click_google')
+  const privateClicks  = ev(displayEvents, 'click_private')
+  const customClicks   = ev(displayEvents, 'click_custom')
+  const newThisMonth   = thisMonth(displayFeedback)
   const responseRate   = totalScans > 0 ? Math.round(((googleClicks + privateClicks + customClicks) / totalScans) * 100) : 0
 
-  const chartData = monthlyData(events, ['view','click_google','click_private'])
+  const chartData = monthlyData(displayEvents, ['view','click_google','click_private'])
   const chartSeries = [
     { key:'view',          color:'#f59e0b', label:'סריקות' },
     { key:'click_google',  color:'#6366f1', label:'Google' },
@@ -409,7 +422,7 @@ function DashboardPage() {
     { label:'Google',   value: googleClicks,  color:'#f59e0b' },
     { label:'פרטי',     value: privateClicks, color:'#6366f1' },
     { label:'קישורים',  value: customClicks,  color:'#10b981' },
-    { label:'WhatsApp', value: ev(events,'click_whatsapp'), color:'#25D366' },
+    { label:'WhatsApp', value: ev(displayEvents,'click_whatsapp'), color:'#25D366' },
   ].filter(s => s.value > 0)
 
   const today = new Date().toLocaleDateString('he-IL', { year:'numeric', month:'long', day:'numeric' })
@@ -448,6 +461,29 @@ function DashboardPage() {
             </button>
           </div>
         </header>
+
+        {/* Branch selector — chains only */}
+        {isChain && locations.length > 0 && (
+          <div className="bg-white border-b border-slate-100 px-6 py-2.5 flex items-center gap-2 overflow-x-auto" dir="rtl">
+            <span className="text-[11px] font-bold text-slate-400 flex-shrink-0">סניף:</span>
+            <button
+              onClick={() => setSelectedLocation(null)}
+              className={`flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-xl transition ${
+                !selectedLocation ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
+              }`}>
+              כל הרשת
+            </button>
+            {locations.map(loc => (
+              <button key={loc.id}
+                onClick={() => setSelectedLocation(loc)}
+                className={`flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-xl transition whitespace-nowrap ${
+                  selectedLocation?.id === loc.id ? 'bg-amber-500 text-white' : 'text-slate-500 hover:bg-slate-100'
+                }`}>
+                {loc.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6" dir="rtl">
@@ -545,7 +581,7 @@ function DashboardPage() {
               {/* Stats — 4 cards */}
               {(() => {
                 const totalGoogleReviews = googleTotal ?? 0
-                const totalPrivate = feedback.length
+                const totalPrivate = displayFeedback.length
                 const combinedTotal = totalGoogleReviews + totalPrivate
                 const googleAvg = googleRating ? Number(googleRating) : 0
                 const privateAvg = avgRatingNum
@@ -558,7 +594,7 @@ function DashboardPage() {
                       { label:'סה"כ ביקורות', value: combinedTotal.toLocaleString(), sub: `${totalGoogleReviews} Google · ${totalPrivate} פרטיות` },
                       { label:'דירוג ממוצע', value: combinedAvg, stars: parseFloat(combinedAvg), sub: 'ממוצע כולל' },
                       { label:'חדשות החודש', value: newThisMonth.toString(), sub: 'ביקורות פרטיות' },
-                      { label:'סריקות NFC', value: (store.nfc_scans ?? 0).toLocaleString(), sub: 'סה"כ כניסות לדף' },
+                      { label:'סריקות NFC', value: displayNfcScans.toLocaleString(), sub: selectedLocation ? selectedLocation.name : 'סה"כ כניסות לדף' },
                     ].map(s => (
                       <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                         <p className="text-[11px] text-slate-400 mb-1 font-medium">{s.label}</p>
@@ -600,7 +636,7 @@ function DashboardPage() {
                   {(() => {
                     const platformData = [
                       { label: 'Google', value: googleTotal ?? 0, color: '#4285F4' },
-                      { label: 'פרטיות', value: feedback.length, color: '#f59e0b' },
+                      { label: 'פרטיות', value: displayFeedback.length, color: '#f59e0b' },
                     ].filter(s => s.value > 0)
                     return platformData.length > 0 ? (
                       <>
@@ -631,7 +667,7 @@ function DashboardPage() {
               {(() => {
                 const allLatest = [
                   ...googleReviews.map(r => ({ ...r, source: 'google' })),
-                  ...feedback.map(f => ({ ...f, source: 'private' })),
+                  ...displayFeedback.map(f => ({ ...f, source: 'private' })),
                 ].sort((a,b) => new Date(b.published_at||b.created_at) - new Date(a.published_at||a.created_at)).slice(0,8)
                 return (
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -886,7 +922,7 @@ function DashboardPage() {
           {activeTab === 'all_reviews' && (() => {
             const allReviews = [
               ...googleReviews.map(r => ({ ...r, source: 'google' })),
-              ...feedback.map(f => ({ ...f, source: 'private' })),
+              ...displayFeedback.map(f => ({ ...f, source: 'private' })),
             ].sort((a, b) => new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at))
 
             return (
@@ -900,8 +936,8 @@ function DashboardPage() {
                   </div>
                   <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
                     <p className="text-[11px] text-slate-400 mb-1">ביקורות פרטיות</p>
-                    <p className="text-2xl font-black text-slate-900">{feedback.length}</p>
-                    {feedback.length > 0 && <p className="text-xs text-amber-500 font-bold mt-0.5">{avgRating} ★</p>}
+                    <p className="text-2xl font-black text-slate-900">{displayFeedback.length}</p>
+                    {displayFeedback.length > 0 && <p className="text-xs text-amber-500 font-bold mt-0.5">{avgRating} ★</p>}
                   </div>
                   <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
                     <p className="text-[11px] text-slate-400 mb-1">מוצגות כאן</p>
@@ -960,10 +996,10 @@ function DashboardPage() {
             <div className="flex flex-col gap-4 max-w-5xl">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  { label:'סריקות היום',   value: evDay(events,'view'),           color:'#f59e0b' },
-                  { label:'סריקות השבוע',  value: evWeek(events,'view'),          color:'#f59e0b' },
-                  { label:'גוגל היום',      value: evDay(events,'click_google'),   color:'#6366f1' },
-                  { label:'גוגל השבוע',     value: evWeek(events,'click_google'),  color:'#6366f1' },
+                  { label:'סריקות היום',   value: evDay(displayEvents,'view'),           color:'#f59e0b' },
+                  { label:'סריקות השבוע',  value: evWeek(displayEvents,'view'),          color:'#f59e0b' },
+                  { label:'גוגל היום',      value: evDay(displayEvents,'click_google'),   color:'#6366f1' },
+                  { label:'גוגל השבוע',     value: evWeek(displayEvents,'click_google'),  color:'#6366f1' },
                 ].map(s => (
                   <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
                     <p className="text-[11px] text-slate-400 mb-1">{s.label}</p>
