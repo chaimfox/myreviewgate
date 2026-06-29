@@ -14,21 +14,59 @@ const svc = () => createClient(
 )
 
 async function getStore(slug) {
-  const { data, error } = await svc()
+  // First try store slug (existing behavior)
+  const { data: store } = await svc()
     .from('stores')
     .select('id, name, logo_url, google_review_url, custom_links, status, nfc_scans')
     .eq('slug', slug)
     .single()
 
-  if (error || !data) return null
-  return data
+  if (store) return { ...store, _type: 'store' }
+
+  // Then try location slug
+  const { data: loc } = await svc()
+    .from('locations')
+    .select('id, name, slug, address, google_review_url, nfc_scans, store_id')
+    .eq('slug', slug)
+    .single()
+
+  if (!loc) return null
+
+  // Get parent store for logo + status + fallback google_review_url + custom_links
+  const { data: parentStore } = await svc()
+    .from('stores')
+    .select('id, logo_url, google_review_url, custom_links, status')
+    .eq('id', loc.store_id)
+    .single()
+
+  if (!parentStore) return null
+
+  return {
+    id: loc.id,
+    _store_id: parentStore.id,
+    _type: 'location',
+    name: loc.name,
+    logo_url: parentStore.logo_url,
+    google_review_url: loc.google_review_url || parentStore.google_review_url,
+    custom_links: parentStore.custom_links,
+    status: parentStore.status,
+    nfc_scans: loc.nfc_scans,
+    address: loc.address,
+  }
 }
 
-async function recordScan(storeId, current) {
-  await svc()
-    .from('stores')
-    .update({ nfc_scans: (current ?? 0) + 1 })
-    .eq('id', storeId)
+async function recordScan(entity) {
+  if (entity._type === 'location') {
+    await svc()
+      .from('locations')
+      .update({ nfc_scans: (entity.nfc_scans ?? 0) + 1 })
+      .eq('id', entity.id)
+  } else {
+    await svc()
+      .from('stores')
+      .update({ nfc_scans: (entity.nfc_scans ?? 0) + 1 })
+      .eq('id', entity.id)
+  }
 }
 
 export async function generateMetadata({ params }) {
@@ -67,7 +105,7 @@ export default async function SlugPage({ params }) {
   if (!store) notFound()
 
   // Count every visit as an NFC scan (fire-and-forget)
-  recordScan(store.id, store.nfc_scans).catch(() => {})
+  recordScan(store).catch(() => {})
 
   // Suspended store — show blocked page
   if (store.status === 'suspended') {

@@ -7,7 +7,7 @@ import {
   LogOut, Edit2, RefreshCw, Store, Users,
   Clock, CheckCircle, XCircle, Ban, Unlock,
   Eye, MousePointerClick, Star, TrendingUp, X,
-  Settings, Save, Mail, Phone, MessageSquare, Copy, Link,
+  Settings, Save, Mail, Phone, MessageSquare, Copy, Link, Network, Building2,
 } from 'lucide-react'
 import StoreForm from '@/components/StoreForm'
 import Logo from '@/components/Logo'
@@ -110,6 +110,70 @@ function PlaceIdInput({ store, onSave }) {
         } disabled:opacity-50`}>
         {saving ? '...' : saved ? '✓' : 'שמור'}
       </button>
+    </div>
+  )
+}
+
+/* ── Chain Settings per store ────────────────────────────────── */
+function ChainSettings({ store, onSave }) {
+  const [type,    setType]    = useState(store.type || 'single')
+  const [maxLoc,  setMaxLoc]  = useState(store.max_locations ?? 1)
+  const [prefix,  setPrefix]  = useState(store.location_slug_prefix || store.slug || '')
+  const [saving,  setSaving]  = useState(false)
+  const [saved,   setSaved]   = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    const ok = await onSave(store.id, { type, max_locations: Number(maxLoc), location_slug_prefix: prefix })
+    setSaving(false)
+    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-100">
+      <p className="text-[11px] font-bold text-slate-400 mb-2 flex items-center gap-1.5">
+        <Network size={11}/> סוג חשבון ורשת
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        {/* Type */}
+        <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-2">
+          <button onClick={() => setType('single')}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition ${type === 'single' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>
+            <Building2 size={12}/> סניף בודד
+          </button>
+          <button onClick={() => setType('chain')}
+            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition ${type === 'chain' ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+            <Network size={12}/> רשת
+          </button>
+        </div>
+
+        {/* Max locations — only relevant for chains */}
+        {type === 'chain' && (
+          <>
+            <div>
+              <p className="text-[10px] text-slate-400 mb-1">מקס׳ סניפים</p>
+              <input type="number" min={1} max={500} value={maxLoc}
+                onChange={e => setMaxLoc(e.target.value)}
+                className="w-20 border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400"/>
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 mb-1">prefix</p>
+              <input type="text" value={prefix} dir="ltr"
+                onChange={e => setPrefix(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                placeholder="ampm"
+                className="w-24 border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400"/>
+            </div>
+            <p className="text-[10px] text-slate-400 self-end pb-2">→ {prefix || 'prefix'}-tlv</p>
+          </>
+        )}
+
+        <button onClick={handleSave} disabled={saving}
+          className={`text-xs font-bold px-3 py-2 rounded-lg transition self-end ${
+            saved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-400'
+          } disabled:opacity-50`}>
+          {saving ? '...' : saved ? '✓ נשמר' : 'שמור'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -239,6 +303,12 @@ export default function AdminPage() {
     return !error
   }
 
+  async function saveChainSettings(storeId, settings) {
+    const { error } = await supabase.from('stores').update(settings).eq('id', storeId)
+    if (!error) fetchAll()
+    return !error
+  }
+
   async function handleSaveStore(form) {
     if (editingStore) {
       const { error } = await supabase.from('stores').update({ ...form }).eq('id', editingStore.id)
@@ -348,6 +418,7 @@ export default function AdminPage() {
                           <p>📅 {new Date(s.created_at).toLocaleDateString('he-IL')}</p>
                         </div>
                         <NfcLinkButton slug={s.slug} />
+                        <ChainSettings store={s} onSave={saveChainSettings} />
                       </div>
                       <div className="flex flex-col gap-2 flex-shrink-0">
                         <button onClick={() => handleApprove(s.id)}
@@ -394,6 +465,7 @@ export default function AdminPage() {
                         <p className="text-xs text-slate-400 mb-2" dir="ltr">{s.owner_email}</p>
                         <NfcLinkButton slug={s.slug} />
                         <PlaceIdInput store={s} onSave={savePlaceId} />
+                        <ChainSettings store={s} onSave={saveChainSettings} />
                         {/* Mini analytics */}
                         <div className="flex flex-wrap gap-3">
                           <MiniStat icon={Eye}              value={ev(s.id,'view')}         label="כניסות" />

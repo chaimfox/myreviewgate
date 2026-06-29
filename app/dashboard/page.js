@@ -6,6 +6,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   LogOut, Edit2, Copy, Check, ExternalLink, RefreshCw, Store,
   Clock, Star, BarChart2, Settings, Home, MousePointerClick, ChevronRight, AlertCircle,
+  MapPin, Plus, Trash2, X,
 } from 'lucide-react'
 import StoreForm from '@/components/StoreForm'
 import Logo from '@/components/Logo'
@@ -174,9 +175,10 @@ function PendingScreen({ store, onLogout }) {
 }
 
 /* ── Sidebar ─────────────────────────────────────── */
-function Sidebar({ active, setActive, onLogout }) {
+function Sidebar({ active, setActive, onLogout, isChain }) {
   const nav = [
     { id: 'overview',    label: 'דשבורד',      icon: Home },
+    ...(isChain ? [{ id: 'locations', label: 'סניפים', icon: MapPin }] : []),
     { id: 'all_reviews', label: 'כל הביקורות', icon: Star },
     { id: 'analytics',   label: 'אנליטיקה',    icon: MousePointerClick },
     { id: 'settings',    label: 'הגדרות',       icon: Settings },
@@ -230,6 +232,12 @@ function DashboardPage() {
   const [activeTab,        setActiveTab]        = useState('overview')
   const [copied,           setCopied]           = useState(false)
   const [googleBanner,     setGoogleBanner]     = useState(null) // 'connected' | 'error'
+  const [locations,        setLocations]        = useState([])
+  const [chainInfo,        setChainInfo]        = useState(null)
+  const [showAddLocation,  setShowAddLocation]  = useState(false)
+  const [locationForm,     setLocationForm]     = useState({ name: '', suffix: '', address: '', google_review_url: '' })
+  const [locationSaving,   setLocationSaving]   = useState(false)
+  const [locationMsg,      setLocationMsg]      = useState(null)
 
   useEffect(() => {
     if (searchParams.get('google_connected') === '1') {
@@ -289,6 +297,12 @@ function DashboardPage() {
 
       // Load saved place_id
       if (storeData.google_place_id) setPlaceId(storeData.google_place_id)
+
+      // Load locations
+      fetch('/api/locations', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => { setLocations(d.locations ?? []); setChainInfo(d.chain ?? null) })
+        .catch(() => {})
     }
   }, [user, supabase])
 
@@ -327,6 +341,33 @@ function DashboardPage() {
       setGoogleSyncing(false)
     }
   }
+  async function handleAddLocation(e) {
+    e.preventDefault()
+    setLocationSaving(true)
+    setLocationMsg(null)
+    try {
+      const res = await fetch('/api/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(locationForm),  // suffix, name, address, google_review_url
+      })
+      const d = await res.json()
+      if (!res.ok) { setLocationMsg({ ok: false, text: d.error ?? 'שגיאה' }); return }
+      setLocations(prev => [...prev, d.location])
+      setChainInfo(prev => prev ? { ...prev, used: prev.used + 1 } : prev)
+      setShowAddLocation(false)
+      setLocationForm({ name: '', suffix: '', address: '', google_review_url: '' })
+    } finally {
+      setLocationSaving(false)
+    }
+  }
+
+  async function handleDeleteLocation(id) {
+    if (!confirm('למחוק סניף זה?')) return
+    await fetch(`/api/locations/${id}`, { method: 'DELETE' })
+    setLocations(prev => prev.filter(l => l.id !== id))
+  }
+
   async function copyLink() {
     await navigator.clipboard.writeText(`https://myreviewgate.com/${store?.slug}`)
     setCopied(true); setTimeout(() => setCopied(false), 2000)
@@ -388,7 +429,7 @@ function DashboardPage() {
         <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between" dir="rtl">
           <div>
             <h1 className="text-lg font-black text-slate-900">
-              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'all_reviews' ? 'כל הביקורות' : activeTab === 'analytics' ? 'אנליטיקה' : 'הגדרות'}
+              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'locations' ? 'סניפים' : activeTab === 'all_reviews' ? 'כל הביקורות' : activeTab === 'analytics' ? 'אנליטיקה' : 'הגדרות'}
             </h1>
             <p className="text-xs text-slate-400">{today}</p>
           </div>
@@ -676,6 +717,171 @@ function DashboardPage() {
             </div>
           )}
 
+          {/* ── LOCATIONS ── */}
+          {activeTab === 'locations' && (
+            <div className="flex flex-col gap-5 max-w-5xl">
+
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">סניפים</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {chainInfo ? `${chainInfo.used} / ${chainInfo.max_locations} סניפים` : `${locations.length} סניפים פעילים`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setShowAddLocation(true); setLocationMsg(null) }}
+                  disabled={chainInfo && chainInfo.used >= chainInfo.max_locations}
+                  className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                  <Plus size={15}/> הוסף סניף
+                </button>
+              </div>
+
+              {/* Limit banner */}
+              {chainInfo && chainInfo.used >= chainInfo.max_locations && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 text-amber-800 text-sm font-semibold">
+                  הגעת למגבלה של {chainInfo.max_locations} סניפים. לשדרוג — צור קשר איתנו.
+                </div>
+              )}
+
+              {/* Add location form */}
+              {showAddLocation && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-black text-slate-800">סניף חדש</h3>
+                    <button onClick={() => setShowAddLocation(false)} className="text-slate-300 hover:text-slate-500">
+                      <X size={18}/>
+                    </button>
+                  </div>
+                  <form onSubmit={handleAddLocation} className="flex flex-col gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">שם הסניף *</label>
+                        <input
+                          value={locationForm.name}
+                          onChange={e => setLocationForm(p => ({ ...p, name: e.target.value }))}
+                          placeholder="סניף תל אביב"
+                          required
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">מזהה סניף *</label>
+                        <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-amber-400">
+                          <span className="bg-slate-50 px-2.5 py-2.5 text-xs font-mono text-slate-500 border-r border-slate-200 whitespace-nowrap">
+                            {chainInfo?.prefix || store?.slug || 'brand'}-
+                          </span>
+                          <input
+                            value={locationForm.suffix}
+                            onChange={e => setLocationForm(p => ({ ...p, suffix: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') }))}
+                            placeholder="tlv"
+                            required
+                            dir="ltr"
+                            className="flex-1 px-2.5 py-2.5 text-sm focus:outline-none bg-white"
+                          />
+                        </div>
+                        {locationForm.suffix && (
+                          <p className="text-[10px] text-slate-400 mt-1" dir="ltr">
+                            myreviewgate.com/{chainInfo?.prefix || store?.slug || 'brand'}-{locationForm.suffix}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">כתובת הסניף</label>
+                      <input
+                        value={locationForm.address}
+                        onChange={e => setLocationForm(p => ({ ...p, address: e.target.value }))}
+                        placeholder="רחוב דיזנגוף 1, תל אביב"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">קישור Google ביקורות</label>
+                      <input
+                        value={locationForm.google_review_url}
+                        onChange={e => setLocationForm(p => ({ ...p, google_review_url: e.target.value }))}
+                        placeholder="https://g.page/r/..."
+                        dir="ltr"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                    </div>
+                    {locationMsg && (
+                      <p className={`text-sm font-semibold ${locationMsg.ok ? 'text-emerald-600' : 'text-red-500'}`}>{locationMsg.text}</p>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <button type="submit" disabled={locationSaving}
+                        className="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-bold py-2.5 rounded-xl transition disabled:opacity-50">
+                        {locationSaving ? 'שומר...' : 'צור סניף'}
+                      </button>
+                      <button type="button" onClick={() => setShowAddLocation(false)}
+                        className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-500 hover:bg-slate-50 transition">
+                        ביטול
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Locations grid */}
+              {locations.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-16 flex flex-col items-center gap-3">
+                  <MapPin size={32} className="text-slate-200"/>
+                  <p className="text-slate-400 text-sm font-semibold">אין סניפים עדיין</p>
+                  <button onClick={() => setShowAddLocation(true)}
+                    className="text-amber-500 text-sm font-bold hover:underline">+ הוסף את הסניף הראשון</button>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {locations.map(loc => (
+                    <div key={loc.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col gap-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-black text-slate-900 text-sm">{loc.name}</p>
+                          {loc.address && <p className="text-[11px] text-slate-400 mt-0.5">{loc.address}</p>}
+                        </div>
+                        <button onClick={() => handleDeleteLocation(loc.id)}
+                          className="text-slate-200 hover:text-red-400 transition flex-shrink-0">
+                          <Trash2 size={14}/>
+                        </button>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-slate-50 rounded-xl p-2.5 text-center">
+                          <p className="text-base font-black text-slate-900">{(loc.nfc_scans ?? 0).toLocaleString()}</p>
+                          <p className="text-[9px] text-slate-400 font-medium">סריקות</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-2.5 text-center">
+                          <p className="text-base font-black text-slate-900">{(loc.private_review_count ?? 0).toLocaleString()}</p>
+                          <p className="text-[9px] text-slate-400 font-medium">פרטיות</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-2.5 text-center">
+                          <p className="text-base font-black text-slate-900">{(loc.google_review_count_local ?? 0).toLocaleString()}</p>
+                          <p className="text-[9px] text-slate-400 font-medium">Google</p>
+                        </div>
+                      </div>
+
+                      {/* NFC link */}
+                      <div className="flex items-center gap-2 bg-amber-50 rounded-xl px-3 py-2">
+                        <span className="text-[10px] font-mono text-amber-700 flex-1 truncate" dir="ltr">/{loc.slug}</span>
+                        <button onClick={async () => {
+                          await navigator.clipboard.writeText(`https://myreviewgate.com/${loc.slug}`)
+                        }} className="text-amber-500 hover:text-amber-700 transition flex-shrink-0">
+                          <Copy size={12}/>
+                        </button>
+                        <a href={`/${loc.slug}`} target="_blank" rel="noreferrer"
+                          className="text-amber-500 hover:text-amber-700 transition flex-shrink-0">
+                          <ExternalLink size={12}/>
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── ALL REVIEWS ── */}
           {activeTab === 'all_reviews' && (() => {
             const allReviews = [
@@ -852,16 +1058,17 @@ function DashboardPage() {
 
       {/* Sidebar — RIGHT */}
       <div className="hidden md:flex">
-        <Sidebar active={activeTab} setActive={setActiveTab} onLogout={handleLogout}/>
+        <Sidebar active={activeTab} setActive={setActiveTab} onLogout={handleLogout} isChain={store?.type === 'chain'}/>
       </div>
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 flex items-center justify-around py-2 z-20" dir="rtl">
         {[
-          { id:'overview',    icon: Home,             label:'דשבורד' },
-          { id:'all_reviews', icon: Star,             label:'ביקורות' },
+          { id:'overview',    icon: Home,              label:'דשבורד' },
+          ...(store?.type === 'chain' ? [{ id:'locations', icon: MapPin, label:'סניפים' }] : []),
+          { id:'all_reviews', icon: Star,              label:'ביקורות' },
           { id:'analytics',   icon: MousePointerClick, label:'אנליטיקה' },
-          { id:'settings',    icon: Settings,         label:'הגדרות' },
+          { id:'settings',    icon: Settings,          label:'הגדרות' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setActiveTab(id)}
             className={`flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl transition ${activeTab===id ? 'text-amber-500' : 'text-slate-400'}`}>
