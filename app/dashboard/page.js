@@ -264,17 +264,53 @@ function DashboardPage() {
     }
   }, [searchParams])
 
+  const [isBranchManager, setIsBranchManager] = useState(false)
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.replace('/login'); return }
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+      const { data: profile } = await supabase.from('profiles').select('role, location_id').eq('id', session.user.id).single()
       if (profile?.role === 'super_admin') { router.replace('/admin'); return }
-      setUser(session.user)
+      if (profile?.role === 'branch_manager' && profile?.location_id) {
+        setIsBranchManager(true)
+      }
+      setUser({ ...session.user, _location_id: profile?.location_id ?? null })
     })
   }, [router, supabase])
 
   const fetchData = useCallback(async () => {
     if (!user) return
+
+    // Branch manager — load location data directly (no store)
+    if (user._location_id) {
+      const { createClient: createSvc } = await import('@supabase/supabase-js').catch(() => ({}))
+      // Use public client — RLS will allow reading their own location
+      const { data: loc } = await supabase
+        .from('locations')
+        .select('*, stores(id, name, logo_url, google_review_url, custom_links, status, type, slug)')
+        .eq('id', user._location_id)
+        .single()
+
+      if (loc) {
+        const parentStore = loc.stores
+        // Build a synthetic store object so the rest of the UI works
+        setStore({
+          ...parentStore,
+          _is_branch_manager: true,
+        })
+        setSelectedLocation(loc)
+        setLocations([loc])
+
+        const [{ data: fbData }, { data: evData }] = await Promise.all([
+          supabase.from('feedback').select('*').eq('location_id', loc.id).order('created_at', { ascending: false }),
+          supabase.from('analytics_events').select('*').eq('location_id', loc.id).order('created_at', { ascending: false }),
+        ])
+        setFeedback(fbData ?? [])
+        setEvents(evData ?? [])
+      }
+      return
+    }
+
     const { data: storeData } = await supabase.from('stores').select('*').eq('user_id', user.id).single()
     setStore(storeData ?? null)
     if (storeData?.status === 'approved') {
@@ -285,7 +321,6 @@ function DashboardPage() {
       setFeedback(fbData ?? [])
       setEvents(evData ?? [])
 
-      // Fetch Google reviews
       fetch('/api/google/reviews', { cache: 'no-store' })
         .then(r => r.json())
         .then(d => {
@@ -296,10 +331,8 @@ function DashboardPage() {
         })
         .catch(() => {})
 
-      // Load saved place_id
       if (storeData.google_place_id) setPlaceId(storeData.google_place_id)
 
-      // Load locations
       fetch('/api/locations', { cache: 'no-store' })
         .then(r => r.json())
         .then(d => { setLocations(d.locations ?? []); setChainInfo(d.chain ?? null) })
@@ -462,8 +495,8 @@ function DashboardPage() {
           </div>
         </header>
 
-        {/* Branch selector — chains only */}
-        {isChain && locations.length > 0 && (
+        {/* Branch selector — chains only, not for branch managers */}
+        {isChain && locations.length > 0 && !isBranchManager && (
           <div className="bg-white border-b border-slate-100 px-6 py-2.5 flex items-center gap-2 overflow-x-auto" dir="rtl">
             <span className="text-[11px] font-bold text-slate-400 flex-shrink-0">סניף:</span>
             <button

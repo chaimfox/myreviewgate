@@ -114,6 +114,109 @@ function PlaceIdInput({ store, onSave }) {
   )
 }
 
+/* ── Location Manager Assignment ─────────────────────────────── */
+function LocationManagerAssign({ location }) {
+  const [email,   setEmail]   = useState('')
+  const [saving,  setSaving]  = useState(false)
+  const [msg,     setMsg]     = useState(null)
+
+  async function handleAssign(e) {
+    e.preventDefault()
+    setSaving(true); setMsg(null)
+    const res = await fetch('/api/admin/assign-location', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, location_id: location.id }),
+    })
+    const d = await res.json()
+    setSaving(false)
+    if (res.ok) { setMsg({ ok: true, text: `${d.user_email} הוקצה בהצלחה` }); setEmail('') }
+    else setMsg({ ok: false, text: d.error })
+  }
+
+  async function handleRemove() {
+    if (!confirm('להסיר את מנהל הסניף?')) return
+    await fetch('/api/admin/assign-location', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ location_id: location.id }),
+    })
+    setMsg({ ok: true, text: 'מנהל הוסר' })
+  }
+
+  return (
+    <div className="mt-1.5">
+      <p className="text-[10px] font-bold text-slate-400 mb-1.5 flex items-center gap-1">
+        <Users size={10}/> מנהל סניף
+      </p>
+      <form onSubmit={handleAssign} className="flex gap-2">
+        <input
+          type="email" value={email} required
+          onChange={e => setEmail(e.target.value)}
+          placeholder="מייל של המנהל"
+          dir="ltr"
+          className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-400 bg-slate-50"
+        />
+        <button type="submit" disabled={saving}
+          className="text-xs font-bold px-2.5 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-400 disabled:opacity-50 transition">
+          {saving ? '...' : 'הקצה'}
+        </button>
+        <button type="button" onClick={handleRemove}
+          className="text-xs font-bold px-2.5 py-1.5 border border-slate-200 text-slate-500 rounded-lg hover:bg-red-50 hover:text-red-500 transition">
+          הסר
+        </button>
+      </form>
+      {msg && <p className={`text-[10px] mt-1 font-semibold ${msg.ok ? 'text-emerald-600' : 'text-red-500'}`}>{msg.text}</p>}
+    </div>
+  )
+}
+
+/* ── Chain Locations List (for admin view) ───────────────────── */
+function ChainLocationsList({ store }) {
+  const [locations, setLocations] = useState(null)
+  const [open,      setOpen]      = useState(false)
+
+  async function load() {
+    if (locations !== null) { setOpen(o => !o); return }
+    const res = await fetch(`/api/admin/chain-locations?store_id=${store.id}`)
+    const d = await res.json()
+    setLocations(d.locations ?? [])
+    setOpen(true)
+  }
+
+  if (store.type !== 'chain') return null
+
+  return (
+    <div className="mt-2">
+      <button onClick={load}
+        className="text-[11px] font-bold text-amber-600 hover:underline flex items-center gap-1">
+        <Network size={11}/> {open ? 'הסתר סניפים' : `הצג סניפים (${store.max_locations} מקס׳)`}
+      </button>
+      {open && locations !== null && (
+        <div className="mt-2 flex flex-col gap-2 pl-2 border-r-2 border-amber-100 mr-1">
+          {locations.length === 0
+            ? <p className="text-xs text-slate-400">אין סניפים עדיין</p>
+            : locations.map(loc => (
+                <div key={loc.id} className="bg-slate-50 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">{loc.name}</p>
+                      <p className="text-[10px] text-slate-400 font-mono" dir="ltr">/{loc.slug}</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                      <span>{loc.nfc_scans ?? 0} סריקות</span>
+                    </div>
+                  </div>
+                  <LocationManagerAssign location={loc} />
+                </div>
+              ))
+          }
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ── Chain Settings per store ────────────────────────────────── */
 function ChainSettings({ store, onSave }) {
   const [type,    setType]    = useState(store.type || 'single')
@@ -466,6 +569,7 @@ export default function AdminPage() {
                         <NfcLinkButton slug={s.slug} />
                         <PlaceIdInput store={s} onSave={savePlaceId} />
                         <ChainSettings store={s} onSave={saveChainSettings} />
+                        <ChainLocationsList store={s} />
                         {/* Mini analytics */}
                         <div className="flex flex-wrap gap-3">
                           <MiniStat icon={Eye}              value={ev(s.id,'view')}         label="כניסות" />
