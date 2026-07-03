@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   LogOut, Edit2, Copy, Check, ExternalLink, RefreshCw, Store,
-  Clock, Star, BarChart2, Settings, Home, MousePointerClick, ChevronRight, AlertCircle,
+  Clock, Star, BarChart2, Settings, Home, ChevronRight, AlertCircle,
   MapPin, Plus, Trash2, X,
 } from 'lucide-react'
 import StoreForm from '@/components/StoreForm'
@@ -14,11 +14,9 @@ import Image from 'next/image'
 
 /* ── helpers ─────────────────────────────────────── */
 const ev     = (arr, type) => arr.filter(e => e.event_type === type).length
-const evDay  = (arr, type) => { const d = new Date(); d.setHours(0,0,0,0); return arr.filter(e => e.event_type === type && new Date(e.created_at) >= d).length }
-const evWeek = (arr, type) => { const d = new Date(); d.setDate(d.getDate()-7); return arr.filter(e => e.event_type === type && new Date(e.created_at) >= d).length }
 
-function monthlyData(eventsArr, types) {
-  const days = Array.from({length:30}, (_,i) => { const d = new Date(); d.setDate(d.getDate()-29+i); return d })
+function monthlyData(eventsArr, types, rangeDays = 30) {
+  const days = Array.from({length:rangeDays}, (_,i) => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-(rangeDays-1)+i); return d })
   return days.map(day => {
     const next = new Date(day); next.setDate(next.getDate()+1)
     const counts = {}
@@ -34,17 +32,57 @@ function thisMonth(arr) {
   return arr.filter(f => new Date(f.created_at) >= d).length
 }
 
-/* ── Area Chart (SVG) ──────────────────────────── */
-function ReviewsOverviewChart({ data, series }) {
+/* ── CSV export (opens natively in Excel) ─────────── */
+function reviewsToCSV(rows) {
+  const headers = ['תאריך', 'מקור', 'דירוג', 'שם/אימייל', 'טלפון', 'הערה', 'תגובת בעל העסק']
+  const cell = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`
+  const lines = [headers.map(cell).join(',')]
+  rows.forEach(r => {
+    lines.push([
+      new Date(r.published_at || r.created_at).toLocaleDateString('he-IL'),
+      r.source === 'google' ? 'Google' : 'פרטי',
+      r.rating ?? '',
+      r.author_name || r.customer_email || r.customer_name || '',
+      r.customer_phone || '',
+      r.comment || r.feedback || '',
+      r.owner_reply || '',
+    ].map(cell).join(','))
+  })
+  // Leading BOM so Excel detects UTF-8 and renders Hebrew correctly.
+  return '﻿' + lines.join('\r\n')
+}
+
+function downloadReviewsCSV(rows, filename) {
+  const blob = new Blob([reviewsToCSV(rows)], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/* ── Scan Outcome Chart (SVG stacked bars) ──────────
+   Each bar = scans that day. Segments show what happened after the
+   scan: routed to Google, sent private feedback, or no action taken.
+   This reframes the panel around the funnel instead of 3 crossing
+   lines that were hard to read together. ── */
+const FUNNEL_COLORS = { google: '#4285F4', private: '#10b981', none: '#e2e8f0' }
+
+function ReviewsOverviewChart({ data }) {
   const W = 500, H = 140, padL = 28, padR = 8, padT = 12, padB = 24
   const chartW = W - padL - padR
   const chartH = H - padT - padB
-  const maxVal = Math.max(...data.flatMap(d => series.map(s => d[s.key] || 0)), 1)
-  const xStep = chartW / (data.length - 1)
+  // Total is at least scans, but never lets a click outnumber its own scan count
+  // hide the click — some stores' scan tracking undercounts, and the clicks are the
+  // ground truth for "something happened that day".
+  const dayTotal = d => Math.max(d.view || 0, (d.click_google || 0) + (d.click_private || 0))
+  const maxVal = Math.max(...data.map(dayTotal), 1)
+  const n = data.length
+  const slot = chartW / n
+  const barW = Math.max(slot * 0.55, 1.5)
 
-  // Show only every 5th label
-  const labelInterval = Math.ceil(data.length / 6)
-
+  const labelInterval = Math.ceil(n / 6)
   const gridLines = [0, 0.25, 0.5, 0.75, 1]
 
   return (
@@ -66,51 +104,41 @@ function ReviewsOverviewChart({ data, series }) {
         )
       })}
 
-      {/* Area fills */}
-      {[...series].reverse().map(s => {
-        const pts = data.map((d, i) => {
-          const x = padL + i * xStep
-          const y = padT + (1 - (d[s.key]||0) / maxVal) * chartH
-          return [x, y]
+      {/* Stacked bars: google → private → no action, per day */}
+      {data.map((d, i) => {
+        const google  = d.click_google || 0
+        const priv    = d.click_private || 0
+        const total   = dayTotal(d)
+        const none    = Math.max(total - google - priv, 0)
+        const x = padL + i * slot + (slot - barW) / 2
+        const scale = v => (v / maxVal) * chartH
+
+        let yCursor = padT + chartH
+        const segments = [
+          { key:'google',  value: google, color: FUNNEL_COLORS.google },
+          { key:'private', value: priv,   color: FUNNEL_COLORS.private },
+          { key:'none',    value: none,   color: FUNNEL_COLORS.none },
+        ].map(seg => {
+          const h = scale(seg.value)
+          yCursor -= h
+          return { ...seg, y: yCursor, h }
         })
-        const pathD = `M ${pts[0][0]},${pts[0][1]} ` +
-          pts.slice(1).map(p => `L ${p[0]},${p[1]}`).join(' ') +
-          ` L ${pts[pts.length-1][0]},${padT + chartH} L ${pts[0][0]},${padT + chartH} Z`
-        return (
-          <path key={`area-${s.key}`} d={pathD}
-            fill={s.color} opacity="0.08"/>
-        )
-      })}
 
-      {/* Lines */}
-      {series.map(s => {
-        const pts = data.map((d, i) => {
-          const x = padL + i * xStep
-          const y = padT + (1 - (d[s.key]||0) / maxVal) * chartH
-          return `${x},${y}`
-        }).join(' ')
         return (
-          <polyline key={s.key} points={pts}
-            fill="none" stroke={s.color} strokeWidth="1.8"
-            strokeLinecap="round" strokeLinejoin="round"/>
-        )
-      })}
-
-      {/* Dots on last point */}
-      {series.map(s => {
-        const last = data[data.length - 1]
-        const x = padL + (data.length - 1) * xStep
-        const y = padT + (1 - (last[s.key]||0) / maxVal) * chartH
-        return (
-          <circle key={`dot-${s.key}`} cx={x} cy={y} r="3"
-            fill={s.color} stroke="white" strokeWidth="1.5"/>
+          <g key={i}>
+            <title>{`${d.label} — ${total} סריקות · ${google} לגוגל · ${priv} פידבק פרטי`}</title>
+            {segments.map(seg => seg.h > 0 && (
+              <rect key={seg.key} x={x} y={seg.y} width={barW} height={seg.h}
+                fill={seg.color} rx="1"/>
+            ))}
+          </g>
         )
       })}
 
       {/* X labels */}
       {data.map((d, i) => {
-        if (i % labelInterval !== 0 && i !== data.length - 1) return null
-        const x = padL + i * xStep
+        if (i % labelInterval !== 0 && i !== n - 1) return null
+        const x = padL + i * slot + slot / 2
         return (
           <text key={i} x={x} y={H - 4} textAnchor="middle"
             fontSize="7" fill="#94a3b8">
@@ -180,7 +208,6 @@ function Sidebar({ active, setActive, onLogout, isChain }) {
     { id: 'overview',    label: 'דשבורד',      icon: Home },
     ...(isChain ? [{ id: 'locations', label: 'סניפים', icon: MapPin }] : []),
     { id: 'all_reviews', label: 'כל הביקורות', icon: Star },
-    { id: 'analytics',   label: 'אנליטיקה',    icon: MousePointerClick },
     { id: 'settings',    label: 'הגדרות',       icon: Settings },
   ]
   return (
@@ -219,13 +246,13 @@ function DashboardPage() {
   const [store,            setStore]            = useState(null)
   const [feedback,         setFeedback]         = useState([])
   const [events,           setEvents]           = useState([])
+  const [chartRangeDays,   setChartRangeDays]   = useState(30)
   const [googleReviews,    setGoogleReviews]    = useState([])
   const [googleConnected,  setGoogleConnected]  = useState(false)
   const [googleSyncing,    setGoogleSyncing]    = useState(false)
   const [googleRating,     setGoogleRating]     = useState(null)
   const [googleTotal,      setGoogleTotal]      = useState(null)
   const [placeId,          setPlaceId]          = useState('')
-  const [placeIdSaving,    setPlaceIdSaving]    = useState(false)
   const [placeIdMsg,       setPlaceIdMsg]       = useState(null)
   const [showForm,         setShowForm]         = useState(false)
   const [loading,          setLoading]          = useState(true)
@@ -239,6 +266,9 @@ function DashboardPage() {
   const [locationForm,     setLocationForm]     = useState({ name: '', suffix: '', address: '', google_review_url: '' })
   const [locationSaving,   setLocationSaving]   = useState(false)
   const [locationMsg,      setLocationMsg]      = useState(null)
+  const [replyOpenId,      setReplyOpenId]      = useState(null)
+  const [replyDraft,       setReplyDraft]       = useState('')
+  const [replySaving,      setReplySaving]      = useState(false)
 
   useEffect(() => {
     if (searchParams.get('google_connected') === '1') {
@@ -402,6 +432,30 @@ function DashboardPage() {
     setLocations(prev => prev.filter(l => l.id !== id))
   }
 
+  async function handleSendReply(feedbackId) {
+    if (!replyDraft.trim() || replySaving) return
+    setReplySaving(true)
+    try {
+      const res = await fetch(`/api/feedback/${feedbackId}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: replyDraft.trim() }),
+      })
+      if (res.ok) {
+        setFeedback(prev => prev.map(f => f.id === feedbackId
+          ? { ...f, owner_reply: replyDraft.trim(), owner_reply_at: new Date().toISOString() }
+          : f))
+        setReplyOpenId(null)
+        setReplyDraft('')
+      } else {
+        const { error } = await res.json()
+        alert(`שגיאה: ${error}`)
+      }
+    } finally {
+      setReplySaving(false)
+    }
+  }
+
   async function copyLink() {
     await navigator.clipboard.writeText(`https://myreviewgate.com/${store?.slug}`)
     setCopied(true); setTimeout(() => setCopied(false), 2000)
@@ -433,6 +487,20 @@ function DashboardPage() {
   const displayNfcScans = isChain && selectedLocation
     ? (selectedLocation.nfc_scans ?? 0)
     : (store?.nfc_scans ?? 0)
+  // google_reviews rows carry their own location_id, so a selected branch can be
+  // filtered client-side even though the store-wide googleTotal/googleRating
+  // (from Google's API) can't be split per branch.
+  const displayGoogleReviews = isChain && selectedLocation
+    ? googleReviews.filter(r => r.location_id === selectedLocation.id)
+    : googleReviews
+  const displayGoogleTotal = isChain && selectedLocation
+    ? displayGoogleReviews.length
+    : (googleTotal ?? 0)
+  const displayGoogleRating = isChain && selectedLocation
+    ? (displayGoogleReviews.length
+        ? displayGoogleReviews.reduce((s,r) => s + (r.rating||0), 0) / displayGoogleReviews.length
+        : null)
+    : (googleRating ? Number(googleRating) : null)
 
   /* ── computed data ── */
   const avgRating      = displayFeedback.length ? (displayFeedback.reduce((s,f) => s + (f.rating||0), 0) / displayFeedback.length).toFixed(1) : '—'
@@ -444,24 +512,30 @@ function DashboardPage() {
   const newThisMonth   = thisMonth(displayFeedback)
   const responseRate   = totalScans > 0 ? Math.round(((googleClicks + privateClicks + customClicks) / totalScans) * 100) : 0
 
-  const chartData = monthlyData(displayEvents, ['view','click_google','click_private'])
-  const chartSeries = [
-    { key:'view',          color:'#f59e0b', label:'סריקות' },
-    { key:'click_google',  color:'#6366f1', label:'Google' },
-    { key:'click_private', color:'#10b981', label:'פרטי' },
+  const chartData = monthlyData(displayEvents, ['view','click_google','click_private'], chartRangeDays)
+  const chartLegend = [
+    { key:'google',  color: FUNNEL_COLORS.google,  label:'הופנו לגוגל' },
+    { key:'private', color: FUNNEL_COLORS.private, label:'פידבק פרטי' },
+    { key:'none',    color: FUNNEL_COLORS.none,    label:'ללא פעולה' },
   ]
+  const chartTotals = chartData.reduce((acc, d) => ({
+    scans:   acc.scans   + (d.view || 0),
+    google:  acc.google  + (d.click_google || 0),
+    private: acc.private + (d.click_private || 0),
+  }), { scans:0, google:0, private:0 })
 
   const donutData = [
-    { label:'Google',   value: googleClicks,  color:'#f59e0b' },
-    { label:'פרטי',     value: privateClicks, color:'#6366f1' },
-    { label:'קישורים',  value: customClicks,  color:'#10b981' },
+    { label:'Google',   value: googleClicks,  color: FUNNEL_COLORS.google },
+    { label:'פרטי',     value: privateClicks, color: FUNNEL_COLORS.private },
+    { label:'קישורים',  value: customClicks,  color:'#6366f1' },
     { label:'WhatsApp', value: ev(displayEvents,'click_whatsapp'), color:'#25D366' },
   ].filter(s => s.value > 0)
 
   const today = new Date().toLocaleDateString('he-IL', { year:'numeric', month:'long', day:'numeric' })
   const dateRange = (() => {
     const now = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    if (chartRangeDays === 1) return now.toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})
+    const start = new Date(now); start.setDate(start.getDate() - (chartRangeDays - 1))
     return `${start.toLocaleDateString('he-IL',{day:'numeric',month:'short'})} – ${now.toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}`
   })()
 
@@ -475,7 +549,7 @@ function DashboardPage() {
         <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between" dir="rtl">
           <div>
             <h1 className="text-lg font-black text-slate-900">
-              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'locations' ? 'סניפים' : activeTab === 'all_reviews' ? 'כל הביקורות' : activeTab === 'analytics' ? 'אנליטיקה' : 'הגדרות'}
+              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'locations' ? 'סניפים' : activeTab === 'all_reviews' ? 'כל הביקורות' : 'הגדרות'}
             </h1>
             <p className="text-xs text-slate-400">{today}</p>
           </div>
@@ -541,60 +615,85 @@ function DashboardPage() {
 
               {/* Google connect banner */}
               {!googleConnected && (
-                <a href="/api/google/auth"
-                  className="flex items-center gap-3 bg-white border border-blue-100 rounded-2xl px-5 py-3.5 hover:bg-blue-50 transition group">
-                  <svg viewBox="0 0 24 24" width="20" height="20" className="flex-shrink-0">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-800">חבר את Google Business שלך</p>
-                    <p className="text-xs text-slate-400">משוך ביקורות Google ישירות לדשבורד</p>
+                <div className="bg-white border border-blue-100 rounded-2xl px-5 py-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <svg viewBox="0 0 24 24" width="20" height="20" className="flex-shrink-0">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-slate-800">חבר את הביקורות שלך מ-Google</p>
+                      <p className="text-xs text-slate-400">
+                        הדבק את ה-Place ID של העסק שלך —{' '}
+                        <a href="https://developers.google.com/maps/documentation/places/web-service/place-id#find-id"
+                          target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                          איך מוצאים את זה?
+                        </a>
+                      </p>
+                    </div>
                   </div>
-                  <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400 transition flex-shrink-0" />
-                </a>
+                  <div className="flex gap-2">
+                    <input type="text" value={placeId} onChange={e => setPlaceId(e.target.value)}
+                      placeholder="ChIJ..." dir="ltr"
+                      className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition" />
+                    <button onClick={syncGoogleReviews} disabled={googleSyncing || !placeId.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition disabled:opacity-50 flex-shrink-0">
+                      {googleSyncing ? 'מתחבר...' : 'התחבר'}
+                    </button>
+                  </div>
+                  {placeIdMsg && (
+                    <p className={`text-xs mt-2 font-semibold ${placeIdMsg.ok ? 'text-emerald-600' : 'text-red-500'}`}>{placeIdMsg.text}</p>
+                  )}
+                </div>
               )}
               {googleConnected && (
-                <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl px-5 py-3.5">
-                  <svg viewBox="0 0 24 24" width="18" height="18" className="flex-shrink-0">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  <p className="text-sm font-semibold text-emerald-800 flex-1">Google Business מחובר ✓</p>
-                  <span className="text-xs text-emerald-600 hidden sm:block">מתעדכן אוטומטית כל יום</span>
-                  <button
-                    onClick={async () => {
-                      setGoogleSyncing(true)
-                      try {
-                        await fetch('/api/google/oauth-sync', { method: 'POST' })
-                        const d = await fetch('/api/google/reviews', { cache: 'no-store' }).then(r => r.json())
-                        setGoogleReviews(d.reviews ?? [])
-                        setGoogleRating(d.google_rating ?? null)
-                        setGoogleTotal(d.google_review_count ?? null)
-                      } finally {
-                        setGoogleSyncing(false)
-                      }
-                    }}
-                    disabled={googleSyncing}
-                    className="text-xs text-emerald-600 hover:text-emerald-800 transition flex-shrink-0 font-semibold disabled:opacity-50">
-                    {googleSyncing ? 'מסנכרן...' : 'סנכרן עכשיו'}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!confirm('להתנתק מ-Google Business?')) return
-                      await fetch('/api/google/disconnect', { method: 'POST' })
-                      setGoogleConnected(false)
-                      setGoogleReviews([])
-                      setGoogleRating(null)
-                      setGoogleTotal(null)
-                    }}
-                    className="text-xs text-slate-400 hover:text-red-500 transition flex-shrink-0 underline">
-                    התנתק
-                  </button>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <svg viewBox="0 0 24 24" width="18" height="18" className="flex-shrink-0">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <p className="text-sm font-semibold text-emerald-800 flex-1">Google Business מחובר ✓</p>
+                    <span className="text-xs text-emerald-600 hidden sm:block">מתעדכן אוטומטית כל יום</span>
+                    <button
+                      onClick={placeId ? syncGoogleReviews : async () => {
+                        setGoogleSyncing(true)
+                        try {
+                          await fetch('/api/google/oauth-sync', { method: 'POST' })
+                          const d = await fetch('/api/google/reviews', { cache: 'no-store' }).then(r => r.json())
+                          setGoogleReviews(d.reviews ?? [])
+                          setGoogleRating(d.google_rating ?? null)
+                          setGoogleTotal(d.google_review_count ?? null)
+                        } finally {
+                          setGoogleSyncing(false)
+                        }
+                      }}
+                      disabled={googleSyncing}
+                      className="text-xs text-emerald-600 hover:text-emerald-800 transition flex-shrink-0 font-semibold disabled:opacity-50">
+                      {googleSyncing ? 'מסנכרן...' : 'סנכרן עכשיו'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('להתנתק מ-Google Business?')) return
+                        await fetch('/api/google/disconnect', { method: 'POST' })
+                        setGoogleConnected(false)
+                        setGoogleReviews([])
+                        setGoogleRating(null)
+                        setGoogleTotal(null)
+                        setPlaceId('')
+                        setPlaceIdMsg(null)
+                      }}
+                      className="text-xs text-slate-400 hover:text-red-500 transition flex-shrink-0 underline">
+                      התנתק
+                    </button>
+                  </div>
+                  {placeIdMsg && (
+                    <p className={`text-xs mt-2 font-semibold ${placeIdMsg.ok ? 'text-emerald-600' : 'text-red-500'}`}>{placeIdMsg.text}</p>
+                  )}
                 </div>
               )}
 
@@ -613,10 +712,10 @@ function DashboardPage() {
 
               {/* Stats — 4 cards */}
               {(() => {
-                const totalGoogleReviews = googleTotal ?? 0
+                const totalGoogleReviews = displayGoogleTotal
                 const totalPrivate = displayFeedback.length
                 const combinedTotal = totalGoogleReviews + totalPrivate
-                const googleAvg = googleRating ? Number(googleRating) : 0
+                const googleAvg = displayGoogleRating || 0
                 const privateAvg = avgRatingNum
                 const combinedAvg = (googleAvg && privateAvg)
                   ? ((googleAvg * totalGoogleReviews + privateAvg * totalPrivate) / (combinedTotal || 1)).toFixed(1)
@@ -644,32 +743,54 @@ function DashboardPage() {
                 )
               })()}
 
-              {/* Charts row */}
-              <div className="grid lg:grid-cols-5 gap-4">
-                {/* Reviews Overview */}
-                <div className="lg:col-span-3 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-black text-slate-800 text-sm">ביקורות — 30 יום</h3>
-                    <span className="text-[10px] text-slate-400 border border-slate-200 rounded-lg px-2 py-1">{dateRange}</span>
-                  </div>
-                  <ReviewsOverviewChart data={chartData} series={chartSeries}/>
-                  <div className="flex items-center gap-4 mt-3">
-                    {chartSeries.map(s => (
-                      <div key={s.key} className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{background:s.color}}/>
-                        <span className="text-[10px] text-slate-500">{s.label}</span>
-                      </div>
-                    ))}
+              {/* Scan activity chart */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                  <h3 className="font-black text-slate-800 text-sm">פעילות סריקות — {chartRangeDays} יום</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+                      {[1,7,30,90].map(d => (
+                        <button key={d} onClick={() => setChartRangeDays(d)}
+                          className={`text-[10px] font-bold px-2 py-1 rounded-md transition ${chartRangeDays===d ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                          {d === 1 ? 'היום' : `${d} ימים`}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap hidden sm:inline">{dateRange}</span>
                   </div>
                 </div>
+                {(chartTotals.scans === 0 && chartTotals.google === 0 && chartTotals.private === 0) ? (
+                  <div className="flex items-center justify-center h-32 text-slate-300 text-sm">אין נתונים עדיין</div>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-slate-400 mb-2">
+                      <span className="font-bold text-slate-700">{chartTotals.scans}</span> סריקות ·{' '}
+                      <span className="font-bold text-slate-700">{chartTotals.google}</span> הופנו לגוגל ·{' '}
+                      <span className="font-bold text-slate-700">{chartTotals.private}</span> פידבק פרטי
+                    </p>
+                    <ReviewsOverviewChart data={chartData}/>
+                    <div className="flex items-center gap-4 mt-3">
+                      {chartLegend.map(s => (
+                        <div key={s.key} className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{background:s.color}}/>
+                          <span className="text-[10px] text-slate-500">{s.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
 
-                {/* Reviews by Platform donut */}
-                <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+              {/* Breakdown donuts */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                {/* Reviews by Platform */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
                   <h3 className="font-black text-slate-800 text-sm mb-3">ביקורות לפי פלטפורמה</h3>
+                  <p className="text-[11px] text-slate-400 -mt-2 mb-3">כמה ביקורות התקבלו בכל ערוץ</p>
                   {(() => {
                     const platformData = [
-                      { label: 'Google', value: googleTotal ?? 0, color: '#4285F4' },
-                      { label: 'פרטיות', value: displayFeedback.length, color: '#f59e0b' },
+                      { label: 'Google', value: displayGoogleTotal, color: FUNNEL_COLORS.google },
+                      { label: 'פרטיות', value: displayFeedback.length, color: FUNNEL_COLORS.private },
                     ].filter(s => s.value > 0)
                     return platformData.length > 0 ? (
                       <>
@@ -694,12 +815,38 @@ function DashboardPage() {
                     )
                   })()}
                 </div>
+
+                {/* Click breakdown */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                  <h3 className="font-black text-slate-800 text-sm mb-3">פילוח לחיצות</h3>
+                  <p className="text-[11px] text-slate-400 -mt-2 mb-3">מה קרה אחרי שסרקו את הקוד</p>
+                  <div className="flex flex-col gap-3">
+                    {donutData.length === 0
+                      ? <p className="text-slate-400 text-sm text-center py-4">אין נתונים עדיין</p>
+                      : donutData.map(seg => {
+                          const total = donutData.reduce((s,g) => s+g.value,0) || 1
+                          const pct = Math.round((seg.value/total)*100)
+                          return (
+                            <div key={seg.label}>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="font-semibold text-slate-700">{seg.label}</span>
+                                <span className="text-slate-400">{seg.value} · {pct}%</span>
+                              </div>
+                              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full transition-all" style={{width:`${pct}%`, background:seg.color}}/>
+                              </div>
+                            </div>
+                          )
+                        })
+                    }
+                  </div>
+                </div>
               </div>
 
               {/* Latest Reviews — unified */}
               {(() => {
                 const allLatest = [
-                  ...googleReviews.map(r => ({ ...r, source: 'google' })),
+                  ...displayGoogleReviews.map(r => ({ ...r, source: 'google' })),
                   ...displayFeedback.map(f => ({ ...f, source: 'private' })),
                 ].sort((a,b) => new Date(b.published_at||b.created_at) - new Date(a.published_at||a.created_at)).slice(0,8)
                 return (
@@ -717,7 +864,7 @@ function DashboardPage() {
                       <div className="divide-y divide-slate-50">
                         {allLatest.map(r => (
                           <div key={r.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm overflow-hidden ${r.source==='google' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm overflow-hidden ${r.source==='google' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
                               {r.author_photo
                                 ? <img src={r.author_photo} alt="" className="w-full h-full object-cover"/>
                                 : (r.author_name||r.customer_name||'א').charAt(0).toUpperCase()}
@@ -725,7 +872,7 @@ function DashboardPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <p className="text-sm font-semibold text-slate-800">{r.author_name||r.customer_name||'אנונימי'}</p>
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.source==='google' ? 'bg-blue-50 text-blue-500' : 'bg-amber-50 text-amber-500'}`}>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.source==='google' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-600'}`}>
                                   {r.source==='google' ? 'Google' : 'פרטי'}
                                 </span>
                               </div>
@@ -750,8 +897,8 @@ function DashboardPage() {
               {/* Rating distribution — all sources */}
               {(() => {
                 const allRated = [
-                  ...googleReviews.filter(r => r.rating).map(r => ({ rating: r.rating })),
-                  ...feedback.filter(f => f.rating).map(f => ({ rating: f.rating })),
+                  ...displayGoogleReviews.filter(r => r.rating).map(r => ({ rating: r.rating })),
+                  ...displayFeedback.filter(f => f.rating).map(f => ({ rating: f.rating })),
                 ]
                 const total = allRated.length
                 return (
@@ -954,7 +1101,7 @@ function DashboardPage() {
           {/* ── ALL REVIEWS ── */}
           {activeTab === 'all_reviews' && (() => {
             const allReviews = [
-              ...googleReviews.map(r => ({ ...r, source: 'google' })),
+              ...displayGoogleReviews.map(r => ({ ...r, source: 'google' })),
               ...displayFeedback.map(f => ({ ...f, source: 'private' })),
             ].sort((a, b) => new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at))
 
@@ -964,8 +1111,8 @@ function DashboardPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
                     <p className="text-[11px] text-slate-400 mb-1">סה"כ ביקורות Google</p>
-                    <p className="text-2xl font-black text-slate-900">{googleTotal?.toLocaleString() ?? '—'}</p>
-                    {googleRating && <p className="text-xs text-amber-500 font-bold mt-0.5">{Number(googleRating).toFixed(1)} ★</p>}
+                    <p className="text-2xl font-black text-slate-900">{displayGoogleTotal.toLocaleString()}</p>
+                    {displayGoogleRating && <p className="text-xs text-amber-500 font-bold mt-0.5">{displayGoogleRating.toFixed(1)} ★</p>}
                   </div>
                   <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
                     <p className="text-[11px] text-slate-400 mb-1">ביקורות פרטיות</p>
@@ -975,14 +1122,21 @@ function DashboardPage() {
                   <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
                     <p className="text-[11px] text-slate-400 mb-1">מוצגות כאן</p>
                     <p className="text-2xl font-black text-slate-900">{allReviews.length}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">5 Google + כל הפרטיות</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{displayGoogleReviews.length} Google + {displayFeedback.length} פרטיות</p>
                   </div>
                 </div>
 
                 {/* Unified list */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                  <div className="px-5 py-4 border-b border-slate-100">
+                  <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="font-black text-slate-800">כל הביקורות</h3>
+                    {allReviews.length > 0 && (
+                      <button
+                        onClick={() => downloadReviewsCSV(allReviews, `ביקורות-${store.slug}-${new Date().toISOString().slice(0,10)}.csv`)}
+                        className="text-xs font-bold text-slate-600 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 hover:border-slate-300 transition">
+                        ייצוא ל-Excel
+                      </button>
+                    )}
                   </div>
                   {allReviews.length === 0 ? (
                     <div className="py-16 text-center text-slate-400 text-sm">אין ביקורות עדיין</div>
@@ -990,7 +1144,7 @@ function DashboardPage() {
                     <div className="divide-y divide-slate-50">
                       {allReviews.map(r => (
                         <div key={r.id} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50 transition">
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm overflow-hidden ${r.source === 'google' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm overflow-hidden ${r.source === 'google' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
                             {r.author_photo
                               ? <img src={r.author_photo} alt="" className="w-full h-full object-cover" />
                               : (r.author_name || r.customer_name || 'א').charAt(0).toUpperCase()}
@@ -998,7 +1152,7 @@ function DashboardPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold text-slate-800 text-sm">{r.author_name || r.customer_name || 'אנונימי'}</p>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.source === 'google' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.source === 'google' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
                                 {r.source === 'google' ? 'Google' : 'פרטי'}
                               </span>
                               <div className="flex items-center gap-0.5">
@@ -1013,6 +1167,41 @@ function DashboardPage() {
                             {(r.comment || r.feedback) && (
                               <p className="text-xs text-slate-500 mt-1 leading-relaxed">{r.comment || r.feedback}</p>
                             )}
+                            {(r.customer_email || r.customer_phone) && (
+                              <p className="text-[11px] text-slate-400 mt-1" dir="ltr">
+                                {[r.customer_email, r.customer_phone].filter(Boolean).join(' · ')}
+                              </p>
+                            )}
+
+                            {r.source === 'private' && (
+                              r.owner_reply ? (
+                                <div className="mt-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                                  <p className="text-[10px] font-bold text-slate-400 mb-0.5">התגובה שלך</p>
+                                  <p className="text-xs text-slate-600 leading-relaxed">{r.owner_reply}</p>
+                                </div>
+                              ) : replyOpenId === r.id ? (
+                                <div className="mt-2 flex flex-col gap-2">
+                                  <textarea value={replyDraft} onChange={e => setReplyDraft(e.target.value)}
+                                    rows={2} placeholder="כתוב תגובה ללקוח..."
+                                    className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 transition resize-none" />
+                                  <div className="flex gap-2">
+                                    <button onClick={() => handleSendReply(r.id)} disabled={replySaving || !replyDraft.trim()}
+                                      className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-400 disabled:opacity-50 transition">
+                                      {replySaving ? 'שולח...' : 'שלח תגובה'}
+                                    </button>
+                                    <button onClick={() => { setReplyOpenId(null); setReplyDraft('') }}
+                                      className="text-xs text-slate-400 hover:text-slate-600 transition">
+                                      ביטול
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button onClick={() => { setReplyOpenId(r.id); setReplyDraft('') }}
+                                  className="text-[11px] text-amber-600 font-bold hover:underline mt-1.5">
+                                  הגב ללקוח
+                                </button>
+                              )
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1022,63 +1211,6 @@ function DashboardPage() {
               </div>
             )
           })()}
-
-
-          {/* ── ANALYTICS ── */}
-          {activeTab === 'analytics' && (
-            <div className="flex flex-col gap-4 max-w-5xl">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[
-                  { label:'סריקות היום',   value: evDay(displayEvents,'view'),           color:'#f59e0b' },
-                  { label:'סריקות השבוע',  value: evWeek(displayEvents,'view'),          color:'#f59e0b' },
-                  { label:'גוגל היום',      value: evDay(displayEvents,'click_google'),   color:'#6366f1' },
-                  { label:'גוגל השבוע',     value: evWeek(displayEvents,'click_google'),  color:'#6366f1' },
-                ].map(s => (
-                  <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-                    <p className="text-[11px] text-slate-400 mb-1">{s.label}</p>
-                    <p className="text-2xl font-black text-slate-900">{s.value}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-black text-slate-800 text-sm">Reviews Overview — 30 יום</h3>
-                  <div className="flex items-center gap-4">
-                    {chartSeries.map(s => (
-                      <div key={s.key} className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{background:s.color}}/>
-                        <span className="text-[10px] text-slate-500">{s.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <ReviewsOverviewChart data={chartData} series={chartSeries}/>
-              </div>
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                <h3 className="font-black text-slate-800 text-sm mb-4">פילוח לחיצות</h3>
-                <div className="flex flex-col gap-3">
-                  {donutData.length === 0
-                    ? <p className="text-slate-400 text-sm text-center py-4">אין נתונים עדיין</p>
-                    : donutData.map(seg => {
-                        const total = donutData.reduce((s,g) => s+g.value,0) || 1
-                        const pct = Math.round((seg.value/total)*100)
-                        return (
-                          <div key={seg.label}>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="font-semibold text-slate-700">{seg.label}</span>
-                              <span className="text-slate-400">{seg.value} · {pct}%</span>
-                            </div>
-                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full transition-all" style={{width:`${pct}%`, background:seg.color}}/>
-                            </div>
-                          </div>
-                        )
-                      })
-                  }
-                </div>
-              </div>
-            </div>
-          )}
 
 
           {/* ── SETTINGS ── */}
@@ -1136,7 +1268,6 @@ function DashboardPage() {
           { id:'overview',    icon: Home,              label:'דשבורד' },
           ...(store?.type === 'chain' ? [{ id:'locations', icon: MapPin, label:'סניפים' }] : []),
           { id:'all_reviews', icon: Star,              label:'ביקורות' },
-          { id:'analytics',   icon: MousePointerClick, label:'אנליטיקה' },
           { id:'settings',    icon: Settings,          label:'הגדרות' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setActiveTab(id)}

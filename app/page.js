@@ -479,8 +479,8 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-6 text-right">
             {[
               { n:'01', icon:'🏷️', t:'מניחים תג', d:'שמים תג NFC או QR על הדלפק. עובד עם כל סמארטפון, ללא הורדת אפליקציה.' },
-              { n:'02', icon:'📱', t:'לקוח סורק', d:'לקוח מרוצה עובר ישר לגוגל. לקוח עם הערה שולח לך הודעה פרטית — רק אתה רואה.' },
-              { n:'03', icon:'📈', t:'הביקורות עולות', d:'הדירוג בגוגל עולה והתלונות נשארות אצלך. הכל בדשבורד אחד.' },
+              { n:'02', icon:'📱', t:'לקוח סורק', d:'כל לקוח בוחר בעצמו: לדרג בגוגל, או לשלוח לך הודעה פרטית שרק אתה רואה.' },
+              { n:'03', icon:'📈', t:'הביקורות עולות', d:'הביקורות ב-Google מצטברות, וההודעות הפרטיות מחכות לך באותו דשבורד.' },
             ].map(s => (
               <div key={s.n} className="relative bg-white border border-slate-100 rounded-3xl p-8 shadow-sm hover:shadow-md transition">
                 <div className="absolute top-6 left-6 text-slate-100 text-5xl font-black select-none">{s.n}</div>
@@ -502,12 +502,12 @@ export default function HomePage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 text-right">
             {[
-              { Icon: TrendingUp,    color:'bg-indigo-50 text-indigo-600',  t:'ניתוב חכם', d:'ביקורות חיוביות הולכות לגוגל. פידבק שלילי נשאר פרטי בינך לבין הלקוח.' },
+              { Icon: TrendingUp,    color:'bg-indigo-50 text-indigo-600',  t:'בחירה חופשית ללקוח', d:'כל לקוח בוחר בעצמו אם לדרג בגוגל או לשלוח לך פידבק פרטי.' },
               { Icon: BarChart2,     color:'bg-amber-50 text-amber-600',    t:'אנליטיקה בזמן אמת', d:'עקוב אחר סריקות, קליקים, דירוגים ומקורות ביקורות — הכל בדשבורד.' },
-              { Icon: MessageSquare, color:'bg-emerald-50 text-emerald-600',t:'פידבק פרטי', d:'לקוח לא מרוצה שולח לך הודעה ישירה. טפל בזה לפני שזה יוצא לציבור.' },
+              { Icon: MessageSquare, color:'bg-emerald-50 text-emerald-600',t:'פידבק פרטי', d:'לקוח שרוצה לשתף הערה פרטית שולח לך הודעה ישירה — לא ביקורת ציבורית.' },
               { Icon: Zap,           color:'bg-violet-50 text-violet-600',  t:'הגדרה מהירה', d:'קבל את תג ה-NFC או QR בדקות. אין צורך בידע טכני.' },
               { Icon: Star,          color:'bg-rose-50 text-rose-600',      t:'ריבוי פלטפורמות', d:'גוגל, פייסבוק, אינסטגרם, וואטסאפ, טריפאדווייזור — נהל הכל ממקום אחד.' },
-              { Icon: Shield,        color:'bg-slate-50 text-slate-600',    t:'מאובטח ופרטי', d:'הנתונים שלך מוצפנים לחלוטין. תלונות לקוחות לא יוצאות לציבור לעולם.' },
+              { Icon: Shield,        color:'bg-slate-50 text-slate-600',    t:'מאובטח ופרטי', d:'הנתונים שלך מוצפנים לחלוטין. הודעות פרטיות נשארות רק בינך לבין הלקוח.' },
             ].map(f => (
               <div key={f.t} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition">
                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center mb-4 ${f.color}`}>

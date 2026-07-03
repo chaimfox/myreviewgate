@@ -5,11 +5,11 @@ export const metadata = {
     google: 'hQ15G145tlT6WojhHJY6qGdTVFJ7jPL2BlzbZigHnuk',
   },
   title: 'myReviewGate – ניהול חוות דעת חכם',
-  description: 'הפוך כל לקוח למדרג מרוצה. myReviewGate מפנה ביקורות חיוביות לגוגל ושומר תלונות פרטיות.',
+  description: 'הפוך כל לקוח למדרג. myReviewGate נותן ללקוחות שלך לבחור בין ביקורת בגוגל להודעה פרטית אליך.',
   metadataBase: new URL('https://myreviewgate.com'),
   openGraph: {
-    title: 'myReviewGate – הפוך כל לקוח למדרג מרוצה',
-    description: 'שים NFC או QR על הדלפק. לקוחות מרוצים → גוגל. לקוחות לא מרוצים → משוב פרטי אליך.',
+    title: 'myReviewGate – הפוך כל לקוח למדרג',
+    description: 'שים NFC או QR על הדלפק. הלקוח בוחר: ביקורת בגוגל, או משוב פרטי אליך.',
     url: 'https://myreviewgate.com',
     siteName: 'myReviewGate',
     locale: 'he_IL',
@@ -17,8 +17,8 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'myReviewGate – הפוך כל לקוח למדרג מרוצה',
-    description: 'שים NFC או QR על הדלפק. לקוחות מרוצים → גוגל. לקוחות לא מרוצים → משוב פרטי.',
+    title: 'myReviewGate – הפוך כל לקוח למדרג',
+    description: 'שים NFC או QR על הדלפק. הלקוח בוחר: ביקורת בגוגל, או משוב פרטי.',
     images: ['/opengraph-image'],
   },
 }

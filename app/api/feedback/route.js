@@ -1,4 +1,6 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { sendFeedbackEmail } from '@/lib/email'
 
@@ -8,11 +10,17 @@ const svc = () => createClient(
 )
 
 export async function POST(request) {
-  const { storeId, rating, comment, customerId, customerPhone, customerEmail } = await request.json()
+  const { storeId, rating, comment, customerPhone, customerEmail } = await request.json()
 
   if (!storeId || !rating || !comment) {
     return NextResponse.json({ error: 'חסרים פרטים' }, { status: 400 })
   }
+
+  // Derive the customer's identity from their own session — never trust a
+  // client-supplied id, or the "one feedback per customer" limit becomes
+  // trivial to bypass by sending a different id each time.
+  const authClient = createRouteHandlerClient({ cookies })
+  const { data: { user } } = await authClient.auth.getUser()
 
   const db = svc()
 
@@ -21,9 +29,9 @@ export async function POST(request) {
     store_id: storeId,
     rating,
     comment,
-    customer_id: customerId ?? null,
+    customer_id: user?.id ?? null,
     customer_phone: customerPhone || null,
-    customer_name: customerEmail || null,
+    customer_email: customerEmail || null,
   })
 
   if (error) {

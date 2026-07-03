@@ -10,6 +10,20 @@ const svc = () => createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// listUsers() is paginated (default 50/page) — walk every page so owners
+// who signed up after the first ~1000 users can still be found by email.
+async function findUserByEmail(admin, email) {
+  const target = email.toLowerCase()
+  const perPage = 1000
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
+    if (error) throw error
+    const found = data.users.find(u => u.email?.toLowerCase() === target)
+    if (found) return found
+    if (data.users.length < perPage) return null
+  }
+}
+
 // POST /api/admin/assign-location
 // Body: { email, location_id }  — assigns a user as branch manager for a location
 export async function POST(request) {
@@ -24,10 +38,12 @@ export async function POST(request) {
   if (!email || !location_id) return NextResponse.json({ error: 'email and location_id required' }, { status: 400 })
 
   // Find user by email using admin API
-  const { data: { users }, error: listErr } = await svc().auth.admin.listUsers()
-  if (listErr) return NextResponse.json({ error: listErr.message }, { status: 500 })
-
-  const target = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+  let target
+  try {
+    target = await findUserByEmail(svc(), email)
+  } catch (listErr) {
+    return NextResponse.json({ error: listErr.message }, { status: 500 })
+  }
   if (!target) return NextResponse.json({ error: 'משתמש לא נמצא עם המייל הזה' }, { status: 404 })
 
   // Upsert profile with location_id

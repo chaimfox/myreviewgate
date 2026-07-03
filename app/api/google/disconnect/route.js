@@ -18,7 +18,12 @@ export async function POST() {
   const { data: store } = await supabase.from('stores').select('id').eq('user_id', user.id).single()
   if (!store) return NextResponse.json({ error: 'Store not found' }, { status: 404 })
 
-  await svc().from('google_oauth_tokens').delete().eq('store_id', store.id)
+  // Clear both connection methods — a store only ever uses one, but
+  // disconnect should work regardless of which one they used.
+  await Promise.all([
+    svc().from('google_oauth_tokens').delete().eq('store_id', store.id),
+    svc().from('stores').update({ google_place_id: null }).eq('id', store.id),
+  ])
 
   return NextResponse.json({ ok: true })
 }

@@ -75,7 +75,7 @@ export default function CustomerReviewPage({ store }) {
   useEffect(() => {
     if (tracked.current) return
     tracked.current = true
-    supabase.from('analytics_events').insert({ store_id: store.id, event_type: 'view' })
+    supabase.from('analytics_events').insert({ store_id: store.id, event_type: 'view' }).then(() => {})
   }, [store.id, supabase])
 
   async function handleGoogle() {
