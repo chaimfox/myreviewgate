@@ -499,7 +499,7 @@ export default function HomePage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 text-right">
             {[
-              { Icon: TrendingUp,    color:'bg-indigo-50 text-indigo-600',  t:'בחירה חופשית ללקוח', d:'כל לקוח בוחר בעצמו אם לדרג בגוגל או לשלוח לך פידבק פרטי.' },
+              { Icon: TrendingUp,    color:'bg-indigo-50 text-indigo-600',  t:'תגובה ללקוח', d:'הגב למשוב פרטי ישירות מהדשבורד — הלקוח מקבל את תגובתך למייל.' },
               { Icon: BarChart2,     color:'bg-amber-50 text-amber-600',    t:'אנליטיקה בזמן אמת', d:'עקוב אחר סריקות, קליקים, דירוגים ומקורות ביקורות — הכל בדשבורד.' },
               { Icon: MessageSquare, color:'bg-emerald-50 text-emerald-600',t:'פידבק פרטי', d:'לקוח שרוצה לשתף הערה פרטית שולח לך הודעה ישירה — לא ביקורת ציבורית.' },
               { Icon: Zap,           color:'bg-violet-50 text-violet-600',  t:'הגדרה מהירה', d:'קבל את תג ה-NFC או QR בדקות. אין צורך בידע טכני.' },
