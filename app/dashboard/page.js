@@ -913,7 +913,7 @@ function DashboardPage() {
                 )
               })()}
 
-              {/* Rating distribution — all sources */}
+              {/* Rating distribution — filtered by date range, includes Google + private */}
               {(() => {
                 const allRated = [
                   ...displayGoogleReviews.filter(r => r.rating).map(r => ({ rating: r.rating })),
