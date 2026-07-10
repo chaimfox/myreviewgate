@@ -130,10 +130,10 @@ export default function ContactPage() {
                     onChange={(e) => setForm((f) => ({ ...f, branches: e.target.value }))}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition">
                     <option value="">בחר כמות</option>
-                    <option value="1">סניף אחד</option>
-                    <option value="עד 5">עד 5 סניפים</option>
-                    <option value="עד 10">עד 10 סניפים</option>
-                    <option value="10+">10 סניפים ומעלה</option>
+                    <option value="1">1 סניף</option>
+                    <option value="2-5">2–5 סניפים</option>
+                    <option value="5-10">5–10 סניפים</option>
+                    <option value="10+">10+ סניפים</option>
                   </select>
                 </div>
 
