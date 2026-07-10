@@ -2,13 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import PublicHeader from '@/components/PublicHeader'
-import { useLang } from '@/hooks/useLang'
 import SiteFooter from '@/components/SiteFooter'
 
 export default function TermsPage() {
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(true)
-  const { langCode, handleLangChange } = useLang()
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -19,7 +17,7 @@ export default function TermsPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f6f3] flex flex-col" dir="rtl">
-      <PublicHeader langCode={langCode} onLangChange={handleLangChange} />
+      <PublicHeader />
 
       <main id="main-content" className="flex-1">
         <article className="max-w-3xl mx-auto px-5 py-12">

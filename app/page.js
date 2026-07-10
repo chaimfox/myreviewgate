@@ -3,10 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Star, ChevronDown, CheckCircle, TrendingUp, Shield, Zap, MessageSquare, BarChart2 } from 'lucide-react'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
 import SiteFooter from '@/components/SiteFooter'
-import { useLang } from '@/hooks/useLang'
-import { getLangMeta } from '@/lib/i18n'
 
 /* ── Platform SVG logos ──────────────────────────────── */
 function GoogleLogo({ size = 36 }) {
@@ -188,7 +185,8 @@ function DashboardMockup() {
                 { l:'Facebook',    c:'bg-indigo-500', p:'20%' },
                 { l:'Instagram',   c:'bg-pink-500',   p:'15%' },
                 { l:'WhatsApp',    c:'bg-emerald-500',p:'10%' },
-                { l:'Tripadvisor', c:'bg-cyan-400',   p:'10%' },
+                // Tripadvisor: no real integration yet — don't advertise it until we connect it.
+                // { l:'Tripadvisor', c:'bg-cyan-400',   p:'10%' },
               ].map(s => (
                 <div key={s.l} className="flex items-center justify-between mb-0.5">
                   <div className="flex items-center gap-1">
@@ -210,7 +208,7 @@ function DashboardMockup() {
             {[
               { name:'Alice Johnson',  platform:'google',    text:'Amazing service and great experience!',          time:'2 min ago' },
               { name:'Mark Thompson',  platform:'facebook',  text:'Very happy with the product. Highly recommend!', time:'15 min ago' },
-              { name:'Sarah Williams', platform:'tripadvisor', text:'Love this place! Will come again.',              time:'1 hour ago' },
+              { name:'Sarah Williams', platform:'google', text:'Love this place! Will come again.',              time:'1 hour ago' },
               { name:'David Brown',    platform:'whatsapp',  text:'Quick response and excellent support.',           time:'2 hours ago' },
             ].map((r,i) => (
               <div key={i} className="flex items-center gap-2 py-1 border-b border-slate-50 last:border-0">
@@ -230,6 +228,7 @@ function DashboardMockup() {
                       <path fill="white" d="M33 24h-6v18h-6V24h-4v-6h4v-3.5C21 10.9 23.2 9 27 9h4v6h-2.5c-1.4 0-1.5.6-1.5 1.5V18h5l-1 6z"/>
                     </svg>
                   )}
+                  {/* Tripadvisor: no real integration yet — don't advertise it until we connect it.
                   {r.platform === 'tripadvisor' && (
                     <svg viewBox="0 0 100 100" className="w-5 h-5">
                       <circle cx="50" cy="50" r="50" fill="#34E0A1"/>
@@ -242,7 +241,7 @@ function DashboardMockup() {
                       <path fill="white" d="M18 42 Q32 28 50 30 Q68 28 82 42 L75 42 Q65 34 50 35 Q35 34 25 42z"/>
                       <path fill="white" d="M38 68 Q50 74 62 68 L58 63 Q50 68 42 63z"/>
                     </svg>
-                  )}
+                  )} */}
                   {r.platform === 'whatsapp' && (
                     <svg viewBox="0 0 100 100" className="w-5 h-5">
                       <path fill="white" d="M50 2C23.5 2 2 23.5 2 50c0 8.5 2.2 16.5 6.1 23.4L2 98l25.4-6.6C33.8 95 41.7 97 50 97c26.5 0 48-21.5 48-48S76.5 2 50 2z"/>
@@ -289,7 +288,8 @@ function HeroVisual() {
     { Logo: FacebookLogo,    name:'Facebook',    category:'ביקורות', stars:4, dotColor:'#6366f1' },
     { Logo: InstagramLogo,   name:'Instagram',   category:'ביקורות', stars:4, dotColor:'#ec4899' },
     { Logo: WhatsAppLogo,    name:'WhatsApp',    category:'פידבק',   stars:5, dotColor:'#10b981' },
-    { Logo: TripAdvisorLogo, name:'Tripadvisor', category:'ביקורות', stars:4, dotColor:'#06b6d4' },
+    // Tripadvisor: no real integration yet — don't advertise it until we connect it.
+    // { Logo: TripAdvisorLogo, name:'Tripadvisor', category:'ביקורות', stars:4, dotColor:'#06b6d4' },
   ]
 
   const cardH  = 78
@@ -374,8 +374,6 @@ function HeroVisual() {
 
 /* ── Main Page ─────────────────────────────────────────── */
 export default function HomePage() {
-  const { langCode, handleLangChange } = useLang()
-  const meta = getLangMeta(langCode)
   const [scrolled, setScrolled]     = useState(false)
   const [mobileMenu, setMobileMenu] = useState(false)
 
@@ -422,7 +420,6 @@ export default function HomePage() {
 
           {/* Actions */}
           <div className="hidden md:flex items-center gap-3 flex-shrink-0 mr-auto">
-            <LanguageSwitcher current={langCode} onChange={handleLangChange} />
             <Link href="/login"
               className="text-sm font-semibold text-slate-700 border border-slate-300 hover:border-indigo-400 hover:text-indigo-600 px-5 py-2 rounded-xl transition">
               כניסה

@@ -7,7 +7,7 @@ import {
   LogOut, Edit2, RefreshCw, Store, Users,
   Clock, CheckCircle, XCircle, Ban, Unlock,
   Eye, MousePointerClick, Star, TrendingUp, X,
-  Settings, Save, Mail, Phone, MessageSquare, Copy, Link, Network, Building2,
+  Settings, Save, Mail, Phone, MessageSquare, Copy, Link, Network, Building2, CreditCard,
 } from 'lucide-react'
 import StoreForm from '@/components/StoreForm'
 import Logo from '@/components/Logo'
@@ -281,6 +281,86 @@ function ChainSettings({ store, onSave }) {
   )
 }
 
+/* ── Billing (manual tracking — no payment gateway yet) ──────── */
+function BillingSettings({ store, onSave }) {
+  const [price,   setPrice]   = useState(store.billing_price_monthly ?? '')
+  const [cycle,   setCycle]   = useState(store.billing_cycle || 'monthly')
+  const [status,  setStatus]  = useState(store.billing_status || 'none')
+  const [nextDate,setNextDate]= useState(store.next_billing_date || '')
+  const [notes,   setNotes]   = useState(store.billing_notes || '')
+  const [saving,  setSaving]  = useState(false)
+  const [saved,   setSaved]   = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    const ok = await onSave(store.id, {
+      billing_price_monthly: price === '' ? null : Number(price),
+      billing_cycle: cycle,
+      billing_status: status,
+      next_billing_date: nextDate || null,
+      billing_notes: notes || null,
+    })
+    setSaving(false)
+    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-100">
+      <p className="text-[11px] font-bold text-slate-400 mb-2 flex items-center gap-1.5">
+        <CreditCard size={11}/> גבייה
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <p className="text-[10px] text-slate-400 mb-1">מחיר חודשי (₪)</p>
+          <input type="number" min={0} value={price}
+            onChange={e => setPrice(e.target.value)}
+            placeholder="350"
+            className="w-24 border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400"/>
+        </div>
+
+        <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-2">
+          <button onClick={() => setCycle('monthly')}
+            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition ${cycle === 'monthly' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>
+            חודשי
+          </button>
+          <button onClick={() => setCycle('annual')}
+            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition ${cycle === 'annual' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>
+            שנתי
+          </button>
+        </div>
+
+        <div>
+          <p className="text-[10px] text-slate-400 mb-1">סטטוס</p>
+          <select value={status} onChange={e => setStatus(e.target.value)}
+            className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <option value="none">לא פעיל</option>
+            <option value="active">פעיל</option>
+            <option value="overdue">באיחור</option>
+          </select>
+        </div>
+
+        <div>
+          <p className="text-[10px] text-slate-400 mb-1">חיוב הבא</p>
+          <input type="date" value={nextDate}
+            onChange={e => setNextDate(e.target.value)}
+            className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"/>
+        </div>
+
+        <button onClick={handleSave} disabled={saving}
+          className={`text-xs font-bold px-3 py-2 rounded-lg transition self-end ${
+            saved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-400'
+          } disabled:opacity-50`}>
+          {saving ? '...' : saved ? '✓ נשמר' : 'שמור'}
+        </button>
+      </div>
+
+      <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+        placeholder="הערות על העסקה (אופציונלי)"
+        className="w-full mt-2 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"/>
+    </div>
+  )
+}
+
 /* ── Stat Card ────────────────────────────────────────────────── */
 function StatCard({ icon: Icon, label, value, bgClass }) {
   return (
@@ -407,6 +487,12 @@ export default function AdminPage() {
   }
 
   async function saveChainSettings(storeId, settings) {
+    const { error } = await supabase.from('stores').update(settings).eq('id', storeId)
+    if (!error) fetchAll()
+    return !error
+  }
+
+  async function saveBilling(storeId, settings) {
     const { error } = await supabase.from('stores').update(settings).eq('id', storeId)
     if (!error) fetchAll()
     return !error
@@ -570,6 +656,7 @@ export default function AdminPage() {
                         <PlaceIdInput store={s} onSave={savePlaceId} />
                         <ChainSettings store={s} onSave={saveChainSettings} />
                         <ChainLocationsList store={s} />
+                        <BillingSettings store={s} onSave={saveBilling} />
                         {/* Mini analytics */}
                         <div className="flex flex-wrap gap-3">
                           <MiniStat icon={Eye}              value={ev(s.id,'view')}         label="כניסות" />

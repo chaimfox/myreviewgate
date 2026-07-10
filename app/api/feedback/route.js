@@ -12,7 +12,7 @@ const svc = () => createClient(
 export async function POST(request) {
   const { storeId, rating, comment, customerPhone, customerEmail } = await request.json()
 
-  if (!storeId || !rating || !comment) {
+  if (!storeId || !rating || !comment || !customerEmail?.trim()) {
     return NextResponse.json({ error: 'חסרים פרטים' }, { status: 400 })
   }
 

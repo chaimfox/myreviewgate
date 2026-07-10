@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import PublicHeader from '@/components/PublicHeader'
-import { useLang } from '@/hooks/useLang'
 import SiteFooter from '@/components/SiteFooter'
 
 export default function AccessibilityPage() {
   const [settings, setSettings] = useState({})
-  const { langCode, handleLangChange } = useLang()
 
   useEffect(() => {
     fetch('/api/admin/settings').then((r) => r.json()).then(setSettings).catch(() => {})
@@ -19,7 +17,7 @@ export default function AccessibilityPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f6f3] flex flex-col" dir="rtl">
-      <PublicHeader langCode={langCode} onLangChange={handleLangChange} />
+      <PublicHeader />
 
       <main id="main-content" className="flex-1">
         <article className="max-w-3xl mx-auto px-5 py-12">

@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Eye, EyeOff, ArrowLeft, Mail, CheckCircle } from 'lucide-react'
 import Logo from '@/components/Logo'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
 import SiteFooter from '@/components/SiteFooter'
-import { useLang } from '@/hooks/useLang'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,8 +23,6 @@ export default function LoginPage() {
   const [resetEmail,  setResetEmail]  = useState('')
   const [resetLoading, setResetLoading] = useState(false)
   const [resetError,  setResetError]  = useState(null)
-
-  const { langCode, handleLangChange } = useLang()
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -104,11 +100,8 @@ export default function LoginPage() {
         {/* Right panel */}
         <div className="flex-1 flex flex-col bg-[#f7f6f3]">
           {/* Top bar */}
-          <div className="flex items-center justify-between px-6 pt-5 pb-2">
+          <div className="flex items-center px-6 pt-5 pb-2">
             <div className="lg:hidden"><Logo size="sm" /></div>
-            <div className="lg:ms-auto">
-              <LanguageSwitcher current={langCode} onChange={handleLangChange} />
-            </div>
           </div>
 
           <div className="flex-1 flex items-center justify-center px-6 py-8">

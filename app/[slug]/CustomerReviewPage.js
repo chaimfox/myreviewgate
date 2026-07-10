@@ -6,9 +6,7 @@ import Image from 'next/image'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import FeedbackForm from '@/components/FeedbackForm'
 import CustomerAuthForm from './CustomerAuthForm'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
-import { getLang, getLangMeta } from '@/lib/i18n'
-import { useLang } from '@/hooks/useLang'
+import { getLang } from '@/lib/i18n'
 import Logo from '@/components/Logo'
 import SiteFooter from '@/components/SiteFooter'
 
@@ -64,11 +62,9 @@ export default function CustomerReviewPage({ store }) {
   const supabase = createClientComponentClient()
   const tracked = useRef(false)
 
-  const { langCode, handleLangChange } = useLang()
   const [screen, setScreen] = useState('choice')
 
-  const t = getLang(langCode)
-  const langMeta = getLangMeta(langCode)
+  const t = getLang('he')
   const customLinks = Array.isArray(store.custom_links) ? store.custom_links.filter(l => l.url && l.label) : []
 
   // Track page view once
@@ -111,7 +107,7 @@ export default function CustomerReviewPage({ store }) {
   }
 
   return (
-    <main id="main-content" dir={langMeta.dir} lang={langCode} className="min-h-screen bg-[#f7f6f3] flex flex-col">
+    <main id="main-content" dir="rtl" lang="he" className="min-h-screen bg-[#f7f6f3] flex flex-col">
 
       {/* ── Banner ── */}
       <div className="relative w-full h-52 overflow-hidden flex-shrink-0">
@@ -125,10 +121,9 @@ export default function CustomerReviewPage({ store }) {
             <Store size={56} className="text-white/30" />
           </div>
         )}
-        {/* Logo + language switcher overlay */}
+        {/* Logo overlay */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 pt-4">
           <Logo size="sm" theme="dark" />
-          <LanguageSwitcher current={langCode} onChange={handleLangChange} />
         </div>
         {/* Store name at bottom of banner */}
         <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
@@ -266,7 +261,7 @@ export default function CustomerReviewPage({ store }) {
         </div>
       </div>
 
-      <SiteFooter dir={langMeta.dir} />
+      <SiteFooter />
     </main>
   )
 }

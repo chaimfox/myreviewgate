@@ -83,7 +83,8 @@ export default function OGImage() {
           gap: '12px',
           marginTop: '40px',
         }}>
-          {['Google', 'Facebook', 'Instagram', 'WhatsApp', 'Tripadvisor'].map((name) => (
+          {/* Tripadvisor: no real integration yet — don't advertise it until we connect it. */}
+          {['Google', 'Facebook', 'Instagram', 'WhatsApp'].map((name) => (
             <div key={name} style={{
               background: 'rgba(255,255,255,0.08)',
               border: '1px solid rgba(255,255,255,0.12)',

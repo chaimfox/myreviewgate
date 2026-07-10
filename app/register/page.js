@@ -6,9 +6,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Store, Link, Mail, Lock, User, Clock, CheckCircle, ArrowLeft } from 'lucide-react'
 import NextLink from 'next/link'
 import Logo from '@/components/Logo'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
 import SiteFooter from '@/components/SiteFooter'
-import { useLang } from '@/hooks/useLang'
 
 const STEPS = ['account', 'business', 'done']
 const STEP_LABELS = ['פרטי חשבון', 'פרטי העסק', 'סיום']
@@ -31,7 +29,6 @@ function RegisterPageInner() {
   const [error, setError] = useState(null)
   const [userId, setUserId] = useState(null)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const { langCode, handleLangChange } = useLang()
 
   // Arriving back from "Sign up with Google" (/auth/callback?...&register?google=1):
   // the user is already authenticated, so skip straight to the business-details step.
@@ -110,10 +107,9 @@ function RegisterPageInner() {
     <div className="min-h-screen bg-[#f7f6f3] flex flex-col" dir="rtl">
     <main id="main-content" className="flex-1 flex flex-col items-center justify-center p-5">
       <div className="w-full max-w-md">
-        {/* Brand + language switcher */}
-        <div className="flex items-center justify-between mb-8">
+        {/* Brand */}
+        <div className="flex items-center justify-center mb-8">
           <Logo size="lg" />
-          <LanguageSwitcher current={langCode} onChange={handleLangChange} />
         </div>
 
         {/* Progress stepper */}

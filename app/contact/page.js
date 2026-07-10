@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { Mail, Phone, Send, CheckCircle } from 'lucide-react'
 import PublicHeader from '@/components/PublicHeader'
-import { useLang } from '@/hooks/useLang'
 import SiteFooter from '@/components/SiteFooter'
 
 export default function ContactPage() {
@@ -12,7 +11,6 @@ export default function ContactPage() {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState(null)
-  const { langCode, handleLangChange } = useLang()
 
   useEffect(() => {
     fetch(`/api/admin/settings?t=${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then(setSettings).catch(() => {})
@@ -40,7 +38,7 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f6f3] flex flex-col" dir="rtl">
-      <PublicHeader langCode={langCode} onLangChange={handleLangChange} />
+      <PublicHeader />
 
       <main id="main-content" className="flex-1">
         <div className="max-w-4xl mx-auto px-5 py-14 grid md:grid-cols-2 gap-10">
