@@ -7,7 +7,7 @@ import SiteFooter from '@/components/SiteFooter'
 
 export default function ContactPage() {
   const [settings, setSettings] = useState({})
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
+  const [form, setForm] = useState({ name: '', email: '', subject: '', branches: '', message: '' })
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState(null)
@@ -112,9 +112,30 @@ export default function ContactPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1.5">נושא</label>
-                  <input type="text" value={form.subject}
+                  <select value={form.subject}
                     onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition" />
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition">
+                    <option value="">בחר נושא</option>
+                    <option value="בקשת הצעת מחיר">בקשת הצעת מחיר</option>
+                    <option value="שאלה כללית">שאלה כללית</option>
+                    <option value="תמיכה טכנית">תמיכה טכנית</option>
+                    <option value="שיתוף פעולה">שיתוף פעולה</option>
+                    <option value="אחר">אחר</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">מספר סניפים</label>
+                  <select value={form.branches}
+                    onChange={(e) => setForm((f) => ({ ...f, branches: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition">
+                    <option value="">בחר כמות</option>
+                    <option value="1">סניף אחד</option>
+                    <option value="2-5">2–5 סניפים</option>
+                    <option value="6-20">6–20 סניפים</option>
+                    <option value="21-50">21–50 סניפים</option>
+                    <option value="50+">50+ סניפים</option>
+                  </select>
                 </div>
 
                 <div>
