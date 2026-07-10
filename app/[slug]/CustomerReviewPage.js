@@ -214,8 +214,8 @@ export default function CustomerReviewPage({ store }) {
           {screen === 'form' && (
             <div className="w-full flex flex-col gap-5 animate-fadeIn">
               <div className="text-center">
-                <h2 className="text-xl font-black text-slate-900">{t.sorryToHear}</h2>
-                <p className="text-slate-500 text-sm mt-1.5 leading-relaxed">{t.tellUsWhatWentWrong}</p>
+                <h2 className="text-xl font-black text-slate-900">{t.privateFeedbackTitle}</h2>
+                <p className="text-slate-500 text-sm mt-1.5 leading-relaxed">{t.privateFeedbackDesc}</p>
               </div>
               <div className="card p-5">
                 <FeedbackForm storeId={store.id} onSubmitted={() => setScreen('thanks')} t={t} />
