@@ -562,17 +562,6 @@ function DashboardPage() {
             <p className="text-xs text-slate-400">{today}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Date range selector — shown on overview + all_reviews tabs */}
-            {(activeTab === 'overview' || activeTab === 'all_reviews') && (
-              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-0.5">
-                {[7, 30, 90].map(d => (
-                  <button key={d} onClick={() => setChartRangeDays(d)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition ${chartRangeDays === d ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
-                    {d === 7 ? '7 ימים' : d === 30 ? '30 ימים' : '90 ימים'}
-                  </button>
-                ))}
-              </div>
-            )}
             <div className="hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
               <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {store.logo_url
@@ -773,9 +762,19 @@ function DashboardPage() {
 
               {/* Scan activity chart */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                   <h3 className="font-black text-slate-800 text-sm">פעילות סריקות</h3>
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">{dateRange}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-0.5">
+                      {[1, 7, 30, 90].map(d => (
+                        <button key={d} onClick={() => setChartRangeDays(d)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-lg transition ${chartRangeDays === d ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                          {d === 1 ? 'יום' : `${d} ימים`}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap hidden sm:inline">{dateRange}</span>
+                  </div>
                 </div>
                 {(chartTotals.scans === 0 && chartTotals.google === 0 && chartTotals.private === 0) ? (
                   <div className="flex items-center justify-center h-32 text-slate-300 text-sm">אין נתונים עדיין</div>
