@@ -529,23 +529,31 @@ function DashboardPage() {
     </div>
   )
 
+  /* ── filter by date range ── */
+  const rangeStart = (() => {
+    const d = new Date(); d.setHours(0,0,0,0)
+    d.setDate(d.getDate() - (chartRangeDays - 1))
+    return d
+  })()
+  const inRange = (item) => new Date(item.created_at) >= rangeStart
+
   /* ── filter by selected location (for chains) ── */
   const isChain = store?.type === 'chain'
-  const displayFeedback = isChain && selectedLocation
+  const displayFeedback = (isChain && selectedLocation
     ? feedback.filter(f => f.location_id === selectedLocation.id)
-    : feedback
-  const displayEvents = isChain && selectedLocation
+    : feedback).filter(inRange)
+  const displayEvents = (isChain && selectedLocation
     ? events.filter(e => e.location_id === selectedLocation.id)
-    : events
+    : events).filter(inRange)
   const displayNfcScans = isChain && selectedLocation
     ? (selectedLocation.nfc_scans ?? 0)
     : (store?.nfc_scans ?? 0)
   // google_reviews rows carry their own location_id, so a selected branch can be
   // filtered client-side even though the store-wide googleTotal/googleRating
   // (from Google's API) can't be split per branch.
-  const displayGoogleReviews = isChain && selectedLocation
+  const displayGoogleReviews = (isChain && selectedLocation
     ? googleReviews.filter(r => r.location_id === selectedLocation.id)
-    : googleReviews
+    : googleReviews).filter(r => new Date(r.published_at || r.synced_at) >= rangeStart)
   const displayGoogleTotal = isChain && selectedLocation
     ? displayGoogleReviews.length
     : (googleTotal ?? 0)
@@ -885,21 +893,23 @@ function DashboardPage() {
                 )
               })()}
 
+              {/* Date range selector */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
+                  {[1, 7, 30, 90].map(d => (
+                    <button key={d} onClick={() => setChartRangeDays(d)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition ${chartRangeDays === d ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                      {d === 1 ? 'יום' : `${d} ימים`}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[11px] text-slate-400">{dateRange}</span>
+              </div>
+
               {/* Scan activity chart */}
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-                <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-                  <h3 className="font-black text-slate-800 text-sm">פעילות סריקות — {chartRangeDays} יום</h3>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5">
-                      {[1,7,30,90].map(d => (
-                        <button key={d} onClick={() => setChartRangeDays(d)}
-                          className={`text-[10px] font-bold px-2 py-1 rounded-md transition ${chartRangeDays===d ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
-                          {d === 1 ? 'היום' : `${d} ימים`}
-                        </button>
-                      ))}
-                    </div>
-                    <span className="text-[10px] text-slate-400 whitespace-nowrap hidden sm:inline">{dateRange}</span>
-                  </div>
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <h3 className="font-black text-slate-800 text-sm">פעילות סריקות</h3>
                 </div>
                 {(chartTotals.scans === 0 && chartTotals.google === 0 && chartTotals.private === 0) ? (
                   <div className="flex items-center justify-center h-32 text-slate-300 text-sm">אין נתונים עדיין</div>
@@ -1036,7 +1046,7 @@ function DashboardPage() {
                 )
               })()}
 
-              {/* Rating distribution — all sources */}
+              {/* Rating distribution — filtered by date range, includes Google + private */}
               {(() => {
                 const allRated = [
                   ...displayGoogleReviews.filter(r => r.rating).map(r => ({ rating: r.rating })),

@@ -8,14 +8,15 @@ const svc = () => createClient(
 )
 
 export async function POST(request) {
-  const { name, email, subject, message } = await request.json()
+  const { name, email, subject, branches, message } = await request.json()
   if (!name || !email || !message) {
     return NextResponse.json({ error: 'שדות חובה חסרים' }, { status: 400 })
   }
-  const { error } = await svc().from('contact_messages').insert({ name, email, subject, message })
+  const fullMessage = branches ? `מספר סניפים: ${branches}\n\n${message}` : message
+  const { error } = await svc().from('contact_messages').insert({ name, email, subject, message: fullMessage })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await sendContactAdminEmail({ name, email, subject, message })
+  await sendContactAdminEmail({ name, email, subject, message: fullMessage })
 
   return NextResponse.json({ ok: true })
 }

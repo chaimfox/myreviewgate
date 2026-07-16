@@ -426,7 +426,7 @@ export default function HomePage() {
             </Link>
             <Link href="/register"
               className="text-sm font-bold bg-amber-500 hover:bg-amber-400 text-white px-5 py-2.5 rounded-xl transition shadow-sm shadow-amber-200">
-              התחל בחינם
+              הירשם
             </Link>
           </div>
 
@@ -444,7 +444,7 @@ export default function HomePage() {
             ))}
             <div className="flex gap-3 pt-2 border-t border-slate-100">
               <Link href="/login" className="flex-1 text-center text-sm font-semibold text-slate-700 py-2.5 rounded-xl border border-slate-200">כניסה</Link>
-              <Link href="/register" className="flex-1 text-center text-sm font-bold bg-amber-500 text-white py-2.5 rounded-xl">התחל בחינם</Link>
+              <Link href="/register" className="flex-1 text-center text-sm font-bold bg-amber-500 text-white py-2.5 rounded-xl">הירשם</Link>
             </div>
           </div>
         )}
@@ -499,7 +499,7 @@ export default function HomePage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 text-right">
             {[
-              { Icon: TrendingUp,    color:'bg-indigo-50 text-indigo-600',  t:'בחירה חופשית ללקוח', d:'כל לקוח בוחר בעצמו אם לדרג בגוגל או לשלוח לך פידבק פרטי.' },
+              { Icon: TrendingUp,    color:'bg-indigo-50 text-indigo-600',  t:'תגובה ללקוח', d:'הגב למשוב פרטי ישירות מהדשבורד — הלקוח מקבל את תגובתך למייל.' },
               { Icon: BarChart2,     color:'bg-amber-50 text-amber-600',    t:'אנליטיקה בזמן אמת', d:'עקוב אחר סריקות, קליקים, דירוגים ומקורות ביקורות — הכל בדשבורד.' },
               { Icon: MessageSquare, color:'bg-emerald-50 text-emerald-600',t:'פידבק פרטי', d:'לקוח שרוצה לשתף הערה פרטית שולח לך הודעה ישירה — לא ביקורת ציבורית.' },
               { Icon: Zap,           color:'bg-violet-50 text-violet-600',  t:'הגדרה מהירה', d:'קבל את תג ה-NFC או QR בדקות. אין צורך בידע טכני.' },
@@ -580,7 +580,7 @@ export default function HomePage() {
           <div className="flex gap-4 justify-center flex-wrap">
             <Link href="/register"
               className="bg-amber-500 hover:bg-amber-400 text-white font-bold px-10 py-4 rounded-2xl transition shadow-lg shadow-amber-900/40">
-              הרשם בחינם
+              הירשם
             </Link>
             <Link href="/login"
               className="bg-white/10 hover:bg-white/20 text-white font-bold px-10 py-4 rounded-2xl transition border border-white/10">
