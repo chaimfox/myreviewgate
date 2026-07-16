@@ -1454,7 +1454,27 @@ function DashboardPage() {
 
           {/* ── SETTINGS ── */}
           {activeTab === 'settings' && (
-            <div className="max-w-lg">
+            <div className="max-w-lg flex flex-col gap-4">
+              {(() => {
+                const nfcSlug = selectedLocation ? selectedLocation.slug : store.slug
+                const nfcUrl  = `https://myreviewgate.com/${nfcSlug}`
+                return (
+                  <div className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-3.5 flex items-center gap-3">
+                    <span className="text-xs font-bold text-amber-600 whitespace-nowrap">קישור NFC/QR:</span>
+                    <span className="text-xs font-mono text-amber-800 flex-1 truncate" dir="ltr">{nfcUrl}</span>
+                    <button onClick={async () => {
+                      await navigator.clipboard.writeText(nfcUrl)
+                      setCopied(true); setTimeout(() => setCopied(false), 2000)
+                    }} className="flex items-center gap-1.5 bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-amber-400 transition flex-shrink-0">
+                      {copied ? <><Check size={12}/> הועתק!</> : <><Copy size={12}/> העתק</>}
+                    </button>
+                    <a href={`/${nfcSlug}`} target="_blank" rel="noreferrer"
+                      className="p-1.5 text-amber-500 hover:text-amber-700 transition flex-shrink-0">
+                      <ExternalLink size={14}/>
+                    </a>
+                  </div>
+                )
+              })()}
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col gap-5">
                 <h3 className="font-black text-slate-800">פרטי העסק</h3>
                 <div className="flex items-center gap-4">
