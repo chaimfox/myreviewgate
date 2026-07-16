@@ -6,7 +6,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   LogOut, Edit2, Copy, Check, ExternalLink, RefreshCw, Store,
   Clock, Star, BarChart2, Settings, Home, ChevronRight, AlertCircle,
-  MapPin, Plus, Trash2, X,
+  MapPin, Plus, Trash2, X, Mail, Send,
 } from 'lucide-react'
 import StoreForm from '@/components/StoreForm'
 import Logo from '@/components/Logo'
@@ -211,6 +211,7 @@ function Sidebar({ active, setActive, onLogout, isChain }) {
     { id: 'overview',    label: 'דשבורד',      icon: Home },
     ...(isChain ? [{ id: 'locations', label: 'סניפים', icon: MapPin }] : []),
     { id: 'all_reviews', label: 'כל הביקורות', icon: Star },
+    { id: 'support',     label: 'צור קשר',      icon: Mail },
     { id: 'settings',    label: 'הגדרות',       icon: Settings },
   ]
   return (
@@ -277,6 +278,10 @@ function DashboardPage() {
   const [replyOpenId,      setReplyOpenId]      = useState(null)
   const [replyDraft,       setReplyDraft]       = useState('')
   const [replySaving,      setReplySaving]      = useState(false)
+  const [supportForm,      setSupportForm]      = useState({ category: 'טכני', message: '' })
+  const [supportSending,   setSupportSending]   = useState(false)
+  const [supportSent,      setSupportSent]      = useState(false)
+  const [supportError,     setSupportError]     = useState(null)
 
   useEffect(() => {
     if (searchParams.get('google_connected') === '1') {
@@ -415,6 +420,27 @@ function DashboardPage() {
     await fetchData()
   }
   async function handleLogout() { await supabase.auth.signOut(); router.replace('/login') }
+
+  async function handleSupportSubmit(e) {
+    e.preventDefault()
+    setSupportSending(true)
+    setSupportError(null)
+    try {
+      const res = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(supportForm),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      setSupportSent(true)
+      setSupportForm({ category: 'טכני', message: '' })
+    } catch (err) {
+      setSupportError(err.message || 'שגיאה בשליחה, נסה שוב')
+    } finally {
+      setSupportSending(false)
+    }
+  }
 
   async function syncGoogleReviews() {
     if (!store || googleSyncing || !placeId) return
@@ -613,7 +639,7 @@ function DashboardPage() {
         <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between" dir="rtl">
           <div>
             <h1 className="text-lg font-black text-slate-900">
-              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'locations' ? 'סניפים' : activeTab === 'all_reviews' ? 'כל הביקורות' : 'הגדרות'}
+              {activeTab === 'overview' ? 'דשבורד' : activeTab === 'locations' ? 'סניפים' : activeTab === 'all_reviews' ? 'כל הביקורות' : activeTab === 'support' ? 'צור קשר' : 'הגדרות'}
             </h1>
             <p className="text-xs text-slate-400">{today}</p>
           </div>
@@ -1368,6 +1394,64 @@ function DashboardPage() {
           })()}
 
 
+          {/* ── SUPPORT ── */}
+          {activeTab === 'support' && (
+            <div className="max-w-lg">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                {supportSent ? (
+                  <div className="flex flex-col items-center gap-4 py-8 text-center">
+                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                      <Check size={32} className="text-emerald-500" />
+                    </div>
+                    <h2 className="font-black text-slate-900 text-xl">ההודעה נשלחה!</h2>
+                    <p className="text-slate-500 text-sm">נחזור אליך בהקדם.</p>
+                    <button onClick={() => setSupportSent(false)}
+                      className="text-sm text-amber-600 font-semibold hover:underline mt-1">
+                      שלח פנייה נוספת
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSupportSubmit} className="flex flex-col gap-4">
+                    <div>
+                      <h3 className="font-black text-slate-800">צור קשר עם התמיכה</h3>
+                      <p className="text-xs text-slate-400 mt-1">
+                        פונה בשם <span className="font-semibold">{store.name}</span> — נחזור אליך למייל שאיתו נרשמת.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">סוג הפנייה</label>
+                      <select value={supportForm.category}
+                        onChange={(e) => setSupportForm((f) => ({ ...f, category: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition">
+                        <option value="טכני">בעיה טכנית</option>
+                        <option value="חיוב">שאלה בנושא חיוב</option>
+                        <option value="כללי">שאלה כללית</option>
+                        <option value="אחר">אחר</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5">הודעה <span className="text-red-500">*</span></label>
+                      <textarea required rows={5} value={supportForm.message}
+                        onChange={(e) => setSupportForm((f) => ({ ...f, message: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition resize-none" />
+                    </div>
+
+                    {supportError && (
+                      <p className="text-sm text-red-600 bg-red-50 px-3 py-2.5 rounded-xl border border-red-100 text-center">{supportError}</p>
+                    )}
+
+                    <button type="submit" disabled={supportSending}
+                      className="btn-primary flex items-center justify-center gap-2">
+                      {supportSending ? 'שולח...' : <><Send size={15} aria-hidden="true" /> שלח פנייה</>}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ── SETTINGS ── */}
           {activeTab === 'settings' && (
             <div className="max-w-lg">
@@ -1423,6 +1507,7 @@ function DashboardPage() {
           { id:'overview',    icon: Home,              label:'דשבורד' },
           ...(store?.type === 'chain' ? [{ id:'locations', icon: MapPin, label:'סניפים' }] : []),
           { id:'all_reviews', icon: Star,              label:'ביקורות' },
+          { id:'support',     icon: Mail,              label:'צור קשר' },
           { id:'settings',    icon: Settings,          label:'הגדרות' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setActiveTab(id)}
