@@ -12,6 +12,9 @@ import StoreForm from '@/components/StoreForm'
 import Logo from '@/components/Logo'
 import Image from 'next/image'
 
+// Instagram connect UI is built but hidden until the Meta App is approved/configured (META_APP_ID/SECRET).
+const INSTAGRAM_ENABLED = false
+
 /* ── helpers ─────────────────────────────────────── */
 const ev     = (arr, type) => arr.filter(e => e.event_type === type).length
 
@@ -671,13 +674,13 @@ function DashboardPage() {
           )}
 
           {/* Instagram connection banner */}
-          {instagramBanner === 'connected' && (
+          {INSTAGRAM_ENABLED && instagramBanner === 'connected' && (
             <div className="mb-4 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-3.5 text-emerald-800 text-sm font-semibold">
               <Check size={16} className="text-emerald-600 flex-shrink-0" />
               חשבון Instagram חובר בהצלחה!
             </div>
           )}
-          {instagramBanner === 'error' && (
+          {INSTAGRAM_ENABLED && instagramBanner === 'error' && (
             <div className="mb-4 flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-3.5 text-red-800 text-sm font-semibold">
               <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
               אירעה שגיאה בחיבור Instagram. ודא שיש לך חשבון Instagram Business מחובר לעמוד פייסבוק עסקי, ונסה שוב.
@@ -772,8 +775,8 @@ function DashboardPage() {
                 </div>
               )}
 
-              {/* Instagram connect banner */}
-              {!instagramConnected && (
+              {/* Instagram connect banner — hidden until Meta App is approved/configured */}
+              {INSTAGRAM_ENABLED && !instagramConnected && (
                 <div className="bg-white border border-pink-100 rounded-2xl px-5 py-4">
                   <div className="flex items-center gap-3 mb-3">
                     <svg viewBox="0 0 24 24" width="20" height="20" className="flex-shrink-0">
@@ -799,7 +802,7 @@ function DashboardPage() {
                   </a>
                 </div>
               )}
-              {instagramConnected && (
+              {INSTAGRAM_ENABLED && instagramConnected && (
                 <div className="bg-pink-50 border border-pink-100 rounded-2xl px-5 py-3.5">
                   <div className="flex items-center gap-3">
                     <svg viewBox="0 0 24 24" width="18" height="18" className="flex-shrink-0">
