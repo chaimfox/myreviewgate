@@ -1520,7 +1520,7 @@ function DashboardPage() {
             <a href="/privacy" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">מדיניות פרטיות</a>
             <a href="/terms" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">תקנון שימוש</a>
             <a href="/accessibility" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">הצהרת נגישות</a>
-            <a href="/contact" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">צור קשר</a>
+            <button onClick={() => setActiveTab('support')} className="hover:text-slate-600 hover:underline transition">צור קשר</button>
           </div>
 
         </main>
