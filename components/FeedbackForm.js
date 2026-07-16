@@ -72,7 +72,7 @@ export default function FeedbackForm({ storeId, onSubmitted, t }) {
     }
   }
 
-  const canSubmit = comment.trim() && rating > 0 && email.trim()
+  const canSubmit = comment.trim() && rating > 0
 
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
@@ -94,17 +94,17 @@ export default function FeedbackForm({ storeId, onSubmitted, t }) {
         />
       </div>
 
-      {/* Contact — email required so a reply can definitely reach the customer */}
-      <p className="text-xs text-gray-400 -mb-1">פרטי יצירת קשר</p>
+      {/* Contact — phone is already verified via OTP earlier in the flow, so it's
+          enough on its own; email is just an optional extra way to reach the customer */}
+      <p className="text-xs text-gray-400 -mb-1">פרטי יצירת קשר (אופציונלי)</p>
 
       <div className="relative">
-        <Mail size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <Phone size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="אימייל *"
-          required
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder={t.yourPhone}
           dir="ltr"
           className="w-full ps-9 pe-4 py-3 rounded-xl border border-gray-200 bg-white
             text-sm placeholder-gray-400
@@ -113,12 +113,12 @@ export default function FeedbackForm({ storeId, onSubmitted, t }) {
       </div>
 
       <div className="relative">
-        <Phone size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <Mail size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         <input
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder={`${t.yourPhone} (אופציונלי)`}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="אימייל (אופציונלי)"
           dir="ltr"
           className="w-full ps-9 pe-4 py-3 rounded-xl border border-gray-200 bg-white
             text-sm placeholder-gray-400
