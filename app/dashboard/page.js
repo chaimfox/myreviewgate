@@ -560,6 +560,7 @@ function DashboardPage() {
 
   /* ── filter by date range ── */
   const rangeStart = (() => {
+    if (chartRangeDays === 'all') return new Date(0)
     const d = new Date(); d.setHours(0,0,0,0)
     d.setDate(d.getDate() - (chartRangeDays - 1))
     return d
@@ -602,7 +603,7 @@ function DashboardPage() {
   const newThisMonth   = thisMonth(displayFeedback)
   const responseRate   = totalScans > 0 ? Math.round(((googleClicks + privateClicks + customClicks) / totalScans) * 100) : 0
 
-  const chartData = monthlyData(displayEvents, ['view','click_google','click_private'], chartRangeDays)
+  const chartData = monthlyData(displayEvents, ['view','click_google','click_private'], chartRangeDays === 'all' ? 180 : chartRangeDays)
   const chartLegend = [
     { key:'google',  color: FUNNEL_COLORS.google,  label:'הופנו לגוגל' },
     { key:'private', color: FUNNEL_COLORS.private, label:'פידבק פרטי' },
@@ -624,6 +625,7 @@ function DashboardPage() {
   const today = new Date().toLocaleDateString('he-IL', { year:'numeric', month:'long', day:'numeric' })
   const dateRange = (() => {
     const now = new Date()
+    if (chartRangeDays === 'all') return 'כל הזמן'
     if (chartRangeDays === 1) return now.toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})
     const start = new Date(now); start.setDate(start.getDate() - (chartRangeDays - 1))
     return `${start.toLocaleDateString('he-IL',{day:'numeric',month:'short'})} – ${now.toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}`
@@ -925,10 +927,10 @@ function DashboardPage() {
               {/* Date range selector */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
-                  {[1, 7, 30, 90].map(d => (
+                  {[1, 7, 30, 90, 'all'].map(d => (
                     <button key={d} onClick={() => setChartRangeDays(d)}
                       className={`text-xs font-bold px-3 py-1.5 rounded-lg transition ${chartRangeDays === d ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
-                      {d === 1 ? 'יום' : `${d} ימים`}
+                      {d === 'all' ? 'הכל' : d === 1 ? 'יום' : `${d} ימים`}
                     </button>
                   ))}
                 </div>
