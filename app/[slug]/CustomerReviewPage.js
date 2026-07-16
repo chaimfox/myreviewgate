@@ -50,11 +50,19 @@ const WoltIcon = () => (
   </svg>
 )
 
+const WhatsAppIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-5 h-5">
+    <circle cx="12" cy="12" r="12" fill="#25D366"/>
+    <path fill="white" d="M12 5.5c-3.59 0-6.5 2.91-6.5 6.5 0 1.15.3 2.23.83 3.17L5.5 18.5l3.46-.81c.9.49 1.93.76 3.04.76 3.59 0 6.5-2.91 6.5-6.5s-2.91-6.45-6.5-6.45zm3.79 9.19c-.16.45-.94.86-1.3.91-.33.05-.75.07-1.21-.08-.28-.09-.63-.2-1.09-.4-1.92-.83-3.17-2.76-3.27-2.89-.1-.13-.78-1.04-.78-1.98s.49-1.4.67-1.59c.18-.19.39-.24.52-.24s.26 0 .37.01c.12.01.28-.04.44.34.16.39.55 1.34.6 1.44.05.1.08.21.02.34-.06.13-.1.21-.19.32-.1.11-.2.25-.29.33-.1.1-.2.2-.09.4.11.19.48.8 1.03 1.29.71.63 1.31.83 1.5.92.19.09.3.08.41-.04.11-.13.47-.55.6-.74.13-.19.25-.16.42-.09.17.06 1.09.51 1.28.61.19.09.31.14.36.21.05.08.05.44-.1.89z"/>
+  </svg>
+)
+
 function getIcon(url, label) {
   const lower = (url + label).toLowerCase()
   if (lower.includes('instagram')) return <InstagramIcon />
   if (lower.includes('facebook') || lower.includes('fb.com')) return <FacebookIcon />
   if (lower.includes('wolt')) return <WoltIcon />
+  if (lower.includes('whatsapp') || lower.includes('wa.me')) return <WhatsAppIcon />
   return <ExternalLink className="w-5 h-5 text-slate-500" />
 }
 
