@@ -9,7 +9,7 @@ const svc = () => createClient(
 
 export async function POST(request) {
   const { name, email, phone, subject, branches, message } = await request.json()
-  if (!name || !email || !message) {
+  if (!name || !email || !phone || !message) {
     return NextResponse.json({ error: 'שדות חובה חסרים' }, { status: 400 })
   }
   const fullMessage = branches ? `מספר סניפים: ${branches}\n\n${message}` : message

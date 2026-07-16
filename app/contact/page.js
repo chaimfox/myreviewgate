@@ -111,8 +111,8 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5">טלפון</label>
-                  <input type="tel" value={form.phone} dir="ltr"
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">טלפון <span className="text-red-500">*</span></label>
+                  <input type="tel" required value={form.phone} dir="ltr"
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition" />
                 </div>
