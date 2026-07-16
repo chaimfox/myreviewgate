@@ -1512,15 +1512,16 @@ function DashboardPage() {
                   <Edit2 size={14}/> ערוך פרטים
                 </button>
               </div>
-
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-xs text-slate-400">
-                <a href="/privacy" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">מדיניות פרטיות</a>
-                <a href="/terms" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">תקנון שימוש</a>
-                <a href="/accessibility" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">הצהרת נגישות</a>
-                <a href="/contact" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">צור קשר</a>
-              </div>
             </div>
           )}
+
+          {/* Legal/support links — persistent footer across every dashboard tab */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-8 pt-5 border-t border-slate-100 px-1 text-xs text-slate-400">
+            <a href="/privacy" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">מדיניות פרטיות</a>
+            <a href="/terms" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">תקנון שימוש</a>
+            <a href="/accessibility" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">הצהרת נגישות</a>
+            <a href="/contact" target="_blank" rel="noreferrer" className="hover:text-slate-600 hover:underline transition">צור קשר</a>
+          </div>
 
         </main>
       </div>
