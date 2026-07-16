@@ -215,7 +215,7 @@ function Sidebar({ active, setActive, onLogout, isChain }) {
     { id: 'settings',    label: 'הגדרות',       icon: Settings },
   ]
   return (
-    <aside className="w-52 shrink-0 bg-slate-900 min-h-screen flex flex-col py-6 px-3 gap-1" dir="rtl">
+    <aside className="w-52 shrink-0 bg-slate-900 h-screen sticky top-0 flex flex-col py-6 px-3 gap-1 overflow-y-auto" dir="rtl">
       <div className="px-2 mb-6">
         <Logo size="sm" theme="dark" />
       </div>
