@@ -7,7 +7,7 @@ import SiteFooter from '@/components/SiteFooter'
 
 export default function ContactPage() {
   const [settings, setSettings] = useState({})
-  const [form, setForm] = useState({ name: '', email: '', subject: '', branches: '', message: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', branches: '', message: '' })
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState(null)
@@ -107,6 +107,13 @@ export default function ContactPage() {
                   <label className="block text-xs font-bold text-slate-600 mb-1.5">אימייל <span className="text-red-500">*</span></label>
                   <input type="email" required value={form.email} dir="ltr"
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">טלפון</label>
+                  <input type="tel" value={form.phone} dir="ltr"
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-left focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition" />
                 </div>
 
