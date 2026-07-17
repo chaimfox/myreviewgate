@@ -60,7 +60,7 @@ export async function POST(request) {
   if (rows.length > 0) {
     const { error } = await svc()
       .from('google_reviews')
-      .upsert(rows, { onConflict: 'store_id,google_review_id' })
+      .upsert(rows, { onConflict: 'store_id,google_review_id', ignoreDuplicates: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

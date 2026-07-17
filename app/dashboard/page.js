@@ -907,7 +907,14 @@ function DashboardPage() {
                       ) },
                       { label:'דירוג ממוצע', value: combinedAvg, stars: parseFloat(combinedAvg), sub: 'ממוצע כולל' },
                       { label:'חדשות החודש', value: newThisMonth.toString(), sub: 'ביקורות פרטיות' },
-                      { label:'סריקות NFC', value: displayNfcScans.toLocaleString(), sub: selectedLocation ? selectedLocation.name : 'סה"כ כניסות לדף' },
+                      (() => {
+                        if (googleReviews.length === 0) return { label:'ביקורות גוגל ליום', value:'—', sub:'אין ביקורות עדיין' }
+                        const dates = googleReviews.map(r => new Date(r.published_at || r.synced_at)).filter(d => !isNaN(d))
+                        const oldest = new Date(Math.min(...dates))
+                        const daysSince = Math.max(1, Math.round((new Date() - oldest) / (1000 * 60 * 60 * 24)))
+                        const avgPerDay = (googleReviews.length / daysSince).toFixed(1)
+                        return { label:'ביקורות גוגל ליום', value: avgPerDay, sub: `${googleReviews.length} ביקורות · ${daysSince} ימים` }
+                      })(),
                     ].map(s => (
                       <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                         <p className="text-[11px] text-slate-400 mb-1 font-medium">{s.label}</p>
@@ -1028,9 +1035,15 @@ function DashboardPage() {
 
               {/* Latest Reviews — unified */}
               {(() => {
+                const baseGoogleReviews = isChain && selectedLocation
+                  ? googleReviews.filter(r => r.location_id === selectedLocation.id)
+                  : googleReviews
+                const baseFeedback = isChain && selectedLocation
+                  ? feedback.filter(f => f.location_id === selectedLocation.id)
+                  : feedback
                 const allLatest = [
-                  ...displayGoogleReviews.map(r => ({ ...r, source: 'google' })),
-                  ...displayFeedback.map(f => ({ ...f, source: 'private' })),
+                  ...baseGoogleReviews.map(r => ({ ...r, source: 'google' })),
+                  ...baseFeedback.map(f => ({ ...f, source: 'private' })),
                 ].sort((a,b) => new Date(b.published_at||b.created_at) - new Date(a.published_at||a.created_at)).slice(0,8)
                 return (
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
