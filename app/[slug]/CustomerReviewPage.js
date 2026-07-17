@@ -13,7 +13,7 @@ import SiteFooter from '@/components/SiteFooter'
 
 // Google "G" official colors
 const GoogleIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5">
+  <svg viewBox="0 0 24 24" className="w-8 h-8">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -23,7 +23,7 @@ const GoogleIcon = () => (
 
 // Instagram gradient icon
 const InstagramIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5">
+  <svg viewBox="0 0 24 24" className="w-8 h-8">
     <defs>
       <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
         <stop offset="0%" stopColor="#fdf497"/>
@@ -38,20 +38,20 @@ const InstagramIcon = () => (
 )
 
 const FacebookIcon = () => (
-  <svg viewBox="0 0 24 24" fill="#1877F2" className="w-5 h-5">
+  <svg viewBox="0 0 24 24" fill="#1877F2" className="w-8 h-8">
     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
   </svg>
 )
 
 const WoltIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5">
+  <svg viewBox="0 0 24 24" className="w-8 h-8">
     <circle cx="12" cy="12" r="12" fill="#009DE0"/>
     <text x="12" y="16.5" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="sans-serif">W</text>
   </svg>
 )
 
 const WhatsAppIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5">
+  <svg viewBox="0 0 24 24" className="w-8 h-8">
     <circle cx="12" cy="12" r="12" fill="#25D366"/>
     <path fill="white" d="M12 5.5c-3.59 0-6.5 2.91-6.5 6.5 0 1.15.3 2.23.83 3.17L5.5 18.5l3.46-.81c.9.49 1.93.76 3.04.76 3.59 0 6.5-2.91 6.5-6.5s-2.91-6.45-6.5-6.45zm3.79 9.19c-.16.45-.94.86-1.3.91-.33.05-.75.07-1.21-.08-.28-.09-.63-.2-1.09-.4-1.92-.83-3.17-2.76-3.27-2.89-.1-.13-.78-1.04-.78-1.98s.49-1.4.67-1.59c.18-.19.39-.24.52-.24s.26 0 .37.01c.12.01.28-.04.44.34.16.39.55 1.34.6 1.44.05.1.08.21.02.34-.06.13-.1.21-.19.32-.1.11-.2.25-.29.33-.1.1-.2.2-.09.4.11.19.48.8 1.03 1.29.71.63 1.31.83 1.5.92.19.09.3.08.41-.04.11-.13.47-.55.6-.74.13-.19.25-.16.42-.09.17.06 1.09.51 1.28.61.19.09.31.14.36.21.05.08.05.44-.1.89z"/>
   </svg>
@@ -181,7 +181,7 @@ export default function CustomerReviewPage({ store }) {
                     rounded-2xl px-5 py-4 shadow-sm
                     hover:border-slate-400 hover:shadow-md active:scale-[0.98] transition-all duration-150">
                   <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center" aria-hidden="true">
-                    <MessageSquare size={22} className="text-slate-500" />
+                    <MessageSquare size={32} className="text-slate-500" />
                   </div>
                   <div className="flex-1 text-right">
                     <p className="font-bold text-slate-900 text-[15px]">{t.privateFeedback}</p>
