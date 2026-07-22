@@ -7,6 +7,9 @@ export const metadata = {
   title: 'myReviewGate – ניהול חוות דעת חכם',
   description: 'הפוך כל לקוח למדרג. myReviewGate נותן ללקוחות שלך לבחור בין ביקורת בגוגל להודעה פרטית אליך.',
   metadataBase: new URL('https://myreviewgate.com'),
+  alternates: {
+    canonical: 'https://myreviewgate.com',
+  },
   openGraph: {
     title: 'myReviewGate – הפוך כל לקוח למדרג',
     description: 'שים NFC או QR על הדלפק. הלקוח בוחר: ביקורת בגוגל, או משוב פרטי אליך.',
