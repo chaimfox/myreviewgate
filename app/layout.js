@@ -14,6 +14,7 @@ export const metadata = {
     siteName: 'myReviewGate',
     locale: 'he_IL',
     type: 'website',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -23,10 +24,23 @@ export const metadata = {
   },
 }
 
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'myReviewGate',
+  url: 'https://myreviewgate.com',
+  logo: 'https://myreviewgate.com/icon.svg',
+  sameAs: ['https://myreviewgate.com'],
+}
+
 export default function RootLayout({ children }) {
   return (
     <html lang="he">
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
         {/* Accessibility: skip navigation link */}
         <a href="#main-content" className="skip-link">
           דלג לתוכן הראשי
