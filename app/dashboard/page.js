@@ -766,7 +766,7 @@ function DashboardPage() {
                     <p className="text-sm font-semibold text-emerald-800 flex-1">Google Business מחובר ✓</p>
                     <span className="text-xs text-emerald-600 hidden sm:block">מתעדכן אוטומטית כל יום</span>
                     <button
-                      onClick={placeId ? syncGoogleReviews : async () => {
+                      onClick={async () => {
                         setGoogleSyncing(true)
                         try {
                           await fetch('/api/google/oauth-sync', { method: 'POST' })
