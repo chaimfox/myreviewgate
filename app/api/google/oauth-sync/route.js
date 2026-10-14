@@ -72,31 +72,27 @@ export async function POST() {
 
     // If no location saved yet, try to fetch it now
     if (!locationPath) {
-      // Try v4 API (older but different quota)
       const accountsRes = await fetch(
-        'https://mybusiness.googleapis.com/v4/accounts',
+        'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
         { headers: { Authorization: `Bearer ${accessToken}` } }
       )
-      const accountsText = await accountsRes.text()
-      let accountsData
-      try { accountsData = JSON.parse(accountsText) } catch { accountsData = {} }
+      const accountsData = await accountsRes.json()
 
       const account = accountsData.accounts?.[0]
       if (!account) return NextResponse.json({
         error: 'No Google Business account found',
         debug: accountsData,
-        raw: accountsText.slice(0, 300),
       }, { status: 404 })
 
-      const accountId = account.name.split('/')[1]
       const locRes = await fetch(
-        `https://mybusiness.googleapis.com/v4/${account.name}/locations?pageSize=10`,
+        `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name,title`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       )
       const locData = await locRes.json()
       const loc = locData.locations?.[0]
       if (!loc) return NextResponse.json({ error: 'No business location found', debug: locData }, { status: 404 })
 
+      const accountId = account.name.split('/')[1]
       const locationId = loc.name.split('/')[1]
       locationPath = `accounts/${accountId}/locations/${locationId}`
 
@@ -116,7 +112,7 @@ export async function POST() {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       const reviewsData = await reviewsRes.json()
-      if (reviewsData.error) throw new Error(reviewsData.error.message)
+      if (reviewsData.error) return NextResponse.json({ error: reviewsData.error.message, debug: reviewsData, locationPath }, { status: 400 })
       allReviews = allReviews.concat(reviewsData.reviews ?? [])
       nextPageToken = reviewsData.nextPageToken ?? null
     } while (nextPageToken)
