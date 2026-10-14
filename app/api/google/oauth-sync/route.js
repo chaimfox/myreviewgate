@@ -144,7 +144,7 @@ export async function POST() {
       google_rating: parseFloat(avgRating.toFixed(1)),
     }).eq('id', store.id)
 
-    return NextResponse.json({ synced: allReviews.length })
+    return NextResponse.json({ synced: allReviews.length, locationPath })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

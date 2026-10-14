@@ -1296,9 +1296,11 @@ function DashboardPage() {
 
           {/* ── ALL REVIEWS ── */}
           {activeTab === 'all_reviews' && (() => {
+            const baseGR = isChain && selectedLocation ? googleReviews.filter(r => r.location_id === selectedLocation.id) : googleReviews
+            const baseFB = isChain && selectedLocation ? feedback.filter(f => f.location_id === selectedLocation.id) : feedback
             const allReviews = [
-              ...displayGoogleReviews.map(r => ({ ...r, source: 'google' })),
-              ...displayFeedback.map(f => ({ ...f, source: 'private' })),
+              ...baseGR.map(r => ({ ...r, source: 'google' })),
+              ...baseFB.map(f => ({ ...f, source: 'private' })),
             ].sort((a, b) => new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at))
 
             return (
